@@ -23,11 +23,11 @@ class PdfImportPage extends Page implements HasForms
 {
     use InteractsWithForms;
 
-    protected static string $view = 'filament.admin.pages.pdf-import';
+    protected string $view = 'filament.admin.pages.pdf-import';
 
-    protected static ?string $navigationIcon  = 'heroicon-o-document-arrow-up';
+    protected static \BackedEnum|string|null $navigationIcon  = 'heroicon-o-document-arrow-up';
     protected static ?string $navigationLabel = 'Importa PDF';
-    protected static ?string $navigationGroup = 'Catalogo';
+    protected static \UnitEnum|string|null $navigationGroup = 'Catalogo';
     protected static ?int    $navigationSort  = 11;
     protected static ?string $title           = 'Importa Catalogo PDF';
 

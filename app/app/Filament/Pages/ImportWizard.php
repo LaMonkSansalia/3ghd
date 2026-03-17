@@ -23,11 +23,11 @@ class ImportWizard extends Page implements HasForms
 {
     use InteractsWithForms;
 
-    protected static string $view = 'filament.admin.pages.import-wizard';
+    protected string $view = 'filament.admin.pages.import-wizard';
 
-    protected static ?string $navigationIcon = 'heroicon-o-arrow-up-tray';
+    protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-arrow-up-tray';
     protected static ?string $navigationLabel = 'Importa Catalogo';
-    protected static ?string $navigationGroup = 'Catalogo';
+    protected static \UnitEnum|string|null $navigationGroup = 'Catalogo';
     protected static ?int $navigationSort = 10;
 
     protected static ?string $title = 'Importa Catalogo Fornitore';

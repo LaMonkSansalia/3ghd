@@ -12,7 +12,7 @@ class ViewWebDiscovery extends ViewRecord
 {
     protected static string $resource = WebDiscoveryResource::class;
 
-    protected static string $view = 'filament.admin.pages.web-discovery-view';
+    protected string $view = 'filament.admin.pages.web-discovery-view';
 
     public array $selectedItems = [];
 

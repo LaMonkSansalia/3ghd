@@ -19,7 +19,7 @@ class WebDiscoveryResource extends Resource
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedGlobeAlt;
 
     protected static ?string $navigationLabel = 'Analisi Siti';
-    protected static ?string $navigationGroup = 'Fornitori';
+    protected static \UnitEnum|string|null $navigationGroup = 'Fornitori';
     protected static ?int    $navigationSort  = 20;
 
     protected static ?string $modelLabel       = 'Analisi sito';

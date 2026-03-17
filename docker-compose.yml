@@ -1,6 +1,9 @@
 services:
   studio_app:
-    image: php:8.3-fpm
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: studio3ghd_app:latest
     container_name: studio3ghd_app
     working_dir: /var/www/html
     volumes:
@@ -11,6 +14,8 @@ services:
     depends_on:
       studio_db:
         condition: service_healthy
+      studio_redis:
+        condition: service_started
 
   studio_nginx:
     image: nginx:1.27-alpine
@@ -44,6 +49,13 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+
+  studio_redis:
+    image: redis:7-alpine
+    container_name: studio3ghd_redis
+    command: redis-server --save "" --appendonly no
+    networks:
+      - studio_internal
 
 networks:
   studio_internal:

@@ -14,7 +14,7 @@
 
         <div class="mt-4">
             <x-filament::button
-                wire:click="dispatch"
+                wire:click="startAnalysis"
                 wire:loading.attr="disabled"
                 icon="heroicon-o-rocket-launch"
                 color="primary"

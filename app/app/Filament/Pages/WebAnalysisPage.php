@@ -20,11 +20,11 @@ class WebAnalysisPage extends Page implements HasForms
 {
     use InteractsWithForms;
 
-    protected static string $view = 'filament.admin.pages.web-analysis-page';
+    protected string $view = 'filament.admin.pages.web-analysis-page';
 
-    protected static ?string $navigationIcon  = 'heroicon-o-globe-alt';
+    protected static \BackedEnum|string|null $navigationIcon  = 'heroicon-o-globe-alt';
     protected static ?string $navigationLabel = 'Analisi Sito Fornitore';
-    protected static ?string $navigationGroup = 'Catalogo';
+    protected static \UnitEnum|string|null $navigationGroup = 'Catalogo';
     protected static ?int    $navigationSort  = 11;
     protected static ?string $title           = 'Analisi Sito Web Fornitore';
 
@@ -64,7 +64,7 @@ class WebAnalysisPage extends Page implements HasForms
             ]);
     }
 
-    public function dispatch(): void
+    public function startAnalysis(): void
     {
         $data = $this->form->getState();
 
