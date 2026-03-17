@@ -1,0 +1,125 @@
+# Produzione — studio.3ghomedesign.it
+# VPS: 75.119.148.29 · utente: lamonk · dir: /home/lamonk/3ghomedesign/studio/
+# Nginx raggiunge NPM tramite rete esterna npm_default (nessuna porta pubblica)
+
+services:
+  studio_app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: studio3ghd_app:latest
+    container_name: studio3ghd_app
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./app:/var/www/html
+      - ./php.ini:/usr/local/etc/php/conf.d/custom.ini:ro
+    environment:
+      - APP_ENV=production
+    networks:
+      - studio_internal
+    depends_on:
+      studio_db:
+        condition: service_healthy
+      studio_redis:
+        condition: service_started
+
+  studio_nginx:
+    image: nginx:1.27-alpine
+    container_name: studio3ghd_nginx
+    restart: unless-stopped
+    volumes:
+      - ./app:/var/www/html
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - studio_internal
+      - npm_default        # NPM raggiunge nginx senza port mapping
+    depends_on:
+      - studio_app
+
+  studio_db:
+    image: mariadb:11.4
+    container_name: studio3ghd_db
+    restart: unless-stopped
+    # Nessuna porta esposta all'host — solo rete interna
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MARIADB_DATABASE: ${DB_DATABASE}
+      MARIADB_USER: ${DB_USERNAME}
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - studio_db_data:/var/lib/mysql
+    networks:
+      - studio_internal
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  studio_redis:
+    image: redis:7-alpine
+    container_name: studio3ghd_redis
+    restart: unless-stopped
+    # Nessuna porta esposta all'host
+    command: redis-server --save "" --appendonly no
+    networks:
+      - studio_internal
+
+  studio_queue:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: studio3ghd_app:latest
+    container_name: studio3ghd_queue
+    restart: unless-stopped
+    working_dir: /var/www/html
+    command: php artisan queue:work --sleep=3 --tries=3 --timeout=180 --max-time=3600
+    volumes:
+      - ./app:/var/www/html
+      - ./php.ini:/usr/local/etc/php/conf.d/custom.ini:ro
+    environment:
+      - APP_ENV=production
+    networks:
+      - studio_internal
+    depends_on:
+      studio_db:
+        condition: service_healthy
+      studio_redis:
+        condition: service_started
+
+  studio_scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: studio3ghd_app:latest
+    container_name: studio3ghd_scheduler
+    restart: unless-stopped
+    working_dir: /var/www/html
+    # Esegue schedule:run ogni minuto (simula cron)
+    command: >
+      sh -c "while true; do
+        php artisan schedule:run --no-interaction >> /var/www/html/storage/logs/scheduler.log 2>&1;
+        sleep 60;
+      done"
+    volumes:
+      - ./app:/var/www/html
+      - ./php.ini:/usr/local/etc/php/conf.d/custom.ini:ro
+    environment:
+      - APP_ENV=production
+    networks:
+      - studio_internal
+    depends_on:
+      studio_db:
+        condition: service_healthy
+      studio_redis:
+        condition: service_started
+
+networks:
+  studio_internal:
+    driver: bridge
+  npm_default:
+    external: true    # Rete di Nginx Proxy Manager — già esistente sul VPS
+
+volumes:
+  studio_db_data:

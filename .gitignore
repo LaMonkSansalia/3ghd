@@ -1,0 +1,36 @@
+# Sicurezza — mai in git
+.env
+*.sql
+*.xlsx
+*.tar.gz
+*.zip
+*.bak
+*credentials*.json
+*.pem
+*.key
+
+# Documenti interni (restano in locale)
+*.md
+!README.md
+
+# Laravel
+app/vendor/
+app/node_modules/
+app/public/build/
+app/public/hot
+app/public/storage
+app/storage/logs/*.log
+app/storage/app/public/
+app/storage/framework/cache/
+app/storage/framework/sessions/
+app/storage/framework/testing/
+app/storage/framework/views/
+app/bootstrap/cache/*.php
+app/.env
+app/.env.backup
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
+*.swp
