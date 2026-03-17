@@ -16,7 +16,6 @@
 # Laravel
 app/vendor/
 app/node_modules/
-app/public/build/
 app/public/hot
 app/public/storage
 app/storage/logs/*.log

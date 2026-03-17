@@ -33,9 +33,6 @@ jobs:
             echo "==> git pull"
             git pull origin main
 
-            echo "==> npm build (assets Vite)"
-            cd app && npm ci --prefer-offline && npm run build && cd ..
-
             echo "==> composer install"
             docker compose -f docker-compose.prod.yml exec -T studio_app \
               composer install --no-dev --optimize-autoloader --no-interaction
