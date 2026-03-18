@@ -550,6 +550,12 @@ class WebCrawlerService
             return [];
         }
 
+        $rawLinks = array_filter($m[1], static function (string $link): bool {
+            return ! str_starts_with($link, 'mailto:')
+                && ! str_starts_with($link, 'tel:')
+                && ! str_starts_with($link, 'javascript:');
+        });
+
         $resolved = array_map(function (string $link) use ($origin, $baseUrl): string {
             if (str_starts_with($link, 'http')) {
                 return $link;
@@ -562,7 +568,7 @@ class WebCrawlerService
             }
 
             return rtrim($baseUrl, '/').'/'.$link;
-        }, $m[1]);
+        }, $rawLinks);
 
         $filtered = array_filter($resolved, function (string $link) use ($host): bool {
             if ((parse_url($link, PHP_URL_HOST) ?? '') !== $host) {
