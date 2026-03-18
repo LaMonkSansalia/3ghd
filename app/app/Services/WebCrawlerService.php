@@ -64,6 +64,7 @@ class WebCrawlerService
 
         $htmlItems = [];
         $allPdfUrls = [];
+        $productPageLinks = [];
         $pageIndex = 0;
 
         foreach ($pagesToAnalyze as $pageUrl) {
@@ -86,11 +87,37 @@ class WebCrawlerService
             $pdfLinks = $this->findPdfLinks($pageHtml, $pageUrl);
             $allPdfUrls = array_merge($allPdfUrls, $pdfLinks);
 
+            $productPageLinks = array_merge($productPageLinks, $this->findProductPageLinks($pageHtml, $pageUrl));
+
             Log::info("[Crawler] Page {$pageIndex}/".count($pagesToAnalyze).' done', [
                 'url' => $pageUrl,
                 'items' => count($pageItems),
                 'pdf_links' => count($pdfLinks),
             ]);
+        }
+
+        // Phase 2.5 — scan product-level pages for PDFs (no Haiku, link-follow only)
+        $alreadyCrawled = array_fill_keys($pagesToAnalyze, true);
+        $productPageLinks = array_values(array_filter(
+            array_unique($productPageLinks),
+            fn ($u) => ! isset($alreadyCrawled[$u])
+        ));
+        $productPageLinks = array_slice($productPageLinks, 0, self::MAX_PAGES_TO_CRAWL);
+
+        if (! empty($productPageLinks)) {
+            Log::info('[Crawler] Phase 2.5 — product pages PDF scan', ['count' => count($productPageLinks), 'urls' => $productPageLinks]);
+            foreach ($productPageLinks as $productPageUrl) {
+                try {
+                    $productHtml = $this->fetchPage($productPageUrl);
+                    $pdfLinks = $this->findPdfLinks($productHtml, $productPageUrl);
+                    $allPdfUrls = array_merge($allPdfUrls, $pdfLinks);
+                    if (! empty($pdfLinks)) {
+                        Log::info('[Crawler] Phase 2.5 page — PDF found', ['url' => $productPageUrl, 'pdf_links' => count($pdfLinks)]);
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning('[Crawler] Phase 2.5 skip page', ['url' => $productPageUrl, 'error' => $e->getMessage()]);
+                }
+            }
         }
 
         // Phase 3 — PDF extraction
@@ -462,6 +489,43 @@ class WebCrawlerService
         }, $found);
 
         return array_unique($resolved);
+    }
+
+    /**
+     * Find internal links to product-level pages for Phase 2.5 PDF discovery.
+     *
+     * @return string[]
+     */
+    private function findProductPageLinks(string $html, string $baseUrl): array
+    {
+        $parsed = parse_url($baseUrl);
+        $origin = ($parsed['scheme'] ?? 'https').'://'.($parsed['host'] ?? '');
+        $host = $parsed['host'] ?? '';
+
+        if (! preg_match_all('/href=["\']([^"\'#][^"\']*)["\']/', $html, $m)) {
+            return [];
+        }
+
+        $resolved = array_map(function (string $link) use ($origin, $baseUrl): string {
+            if (str_starts_with($link, 'http')) {
+                return $link;
+            }
+            if (str_starts_with($link, '/')) {
+                return $origin.$link;
+            }
+
+            return rtrim($baseUrl, '/').'/'.$link;
+        }, $m[1]);
+
+        $filtered = array_filter($resolved, function (string $link) use ($host): bool {
+            if ((parse_url($link, PHP_URL_HOST) ?? '') !== $host) {
+                return false;
+            }
+
+            return $this->isProductUrl($link);
+        });
+
+        return array_unique(array_values($filtered));
     }
 
     /**
