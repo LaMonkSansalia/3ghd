@@ -49,6 +49,8 @@ class WebCrawlerService
      */
     public function crawl(string $url): array
     {
+        Log::info('[Crawler] START', ['url' => $url]);
+
         $html = $this->fetchPage($url);
 
         // Phase 1 — discover site structure
@@ -58,22 +60,24 @@ class WebCrawlerService
         $pagesToAnalyze = array_unique(array_merge([$url], array_column($sectionUrls, 'url')));
         $pagesToAnalyze = array_slice($pagesToAnalyze, 0, self::MAX_PAGES_TO_CRAWL);
 
+        Log::info('[Crawler] Phase 1 done — pages to crawl', ['count' => count($pagesToAnalyze), 'urls' => $pagesToAnalyze]);
+
         $htmlItems = [];
         $allPdfUrls = [];
+        $pageIndex = 0;
 
         foreach ($pagesToAnalyze as $pageUrl) {
+            $pageIndex++;
             try {
                 $pageHtml = ($pageUrl === $url) ? $html : $this->fetchPage($pageUrl);
             } catch (\Throwable $e) {
-                Log::warning('WebCrawlerService: skip page on error', [
-                    'url' => $pageUrl,
-                    'error' => $e->getMessage(),
-                ]);
+                Log::warning('[Crawler] skip page on error', ['url' => $pageUrl, 'error' => $e->getMessage()]);
 
                 continue;
             }
 
             $text = $this->extractText($pageHtml);
+            $pageItems = [];
             if (! empty(trim($text))) {
                 $pageItems = $this->extractWithClaude($text, $pageUrl);
                 $htmlItems = array_merge($htmlItems, $pageItems);
@@ -81,10 +85,19 @@ class WebCrawlerService
 
             $pdfLinks = $this->findPdfLinks($pageHtml, $pageUrl);
             $allPdfUrls = array_merge($allPdfUrls, $pdfLinks);
+
+            Log::info("[Crawler] Page {$pageIndex}/".count($pagesToAnalyze).' done', [
+                'url' => $pageUrl,
+                'items' => count($pageItems),
+                'pdf_links' => count($pdfLinks),
+            ]);
         }
 
         // Phase 3 — PDF extraction
         $allPdfUrls = array_unique(array_slice($allPdfUrls, 0, self::MAX_PDFS_TO_EXTRACT));
+
+        Log::info('[Crawler] Phase 3 — PDF extraction', ['pdf_count' => count($allPdfUrls), 'urls' => $allPdfUrls]);
+
         $pdfItems = ! empty($allPdfUrls) ? $this->extractFromPdfs($allPdfUrls) : [];
 
         // Merge: PDF items have priority (richer data); HTML fills in the rest
@@ -93,6 +106,9 @@ class WebCrawlerService
             $htmlItems,
             fn ($i) => ! empty($i['name']) && ! in_array(mb_strtolower(trim($i['name'])), $pdfNames)
         );
+
+        $total = count($pdfItems) + count($htmlOnly);
+        Log::info('[Crawler] DONE', ['total' => $total, 'pdf_items' => count($pdfItems), 'html_items' => count($htmlOnly)]);
 
         return array_values(array_merge($pdfItems, $htmlOnly));
     }
@@ -109,16 +125,22 @@ class WebCrawlerService
         // 1. Sitemap
         $sitemapUrls = $this->tryFetchSitemap($baseUrl);
         if (! empty($sitemapUrls)) {
+            Log::info('[Crawler] Phase 1: sitemap OK', ['count' => count($sitemapUrls)]);
+
             return $sitemapUrls;
         }
 
         // 2. Regex nav-link extraction (fast, no AI)
         $navUrls = $this->extractNavLinks($html, $baseUrl);
         if (! empty($navUrls)) {
+            Log::info('[Crawler] Phase 1: nav-regex OK', ['count' => count($navUrls)]);
+
             return $navUrls;
         }
 
         // 3. Haiku navigation analysis (last resort)
+        Log::info('[Crawler] Phase 1: falling back to Haiku nav discovery');
+
         return $this->discoverUrlsWithHaiku($html, $baseUrl);
     }
 
@@ -483,29 +505,32 @@ class WebCrawlerService
             $accessibility = $this->detectPdfAccessibility($url);
 
             if ($accessibility === 'viewer') {
-                Log::info('WebCrawlerService: PDF viewer skipped (not directly downloadable)', ['url' => $url]);
+                Log::info('[Crawler] PDF viewer skipped', ['url' => $url]);
 
                 continue;
             }
 
             $tmpPath = null;
             try {
+                Log::info('[Crawler] PDF downloading', ['url' => $url]);
                 $tmpPath = $this->downloadPdf($url);
                 if ($tmpPath === null) {
+                    Log::warning('[Crawler] PDF download returned null (non-PDF or error)', ['url' => $url]);
+
                     continue;
                 }
 
                 $products = $this->pdfImporter->extract($tmpPath);
+                $count = 0;
                 foreach ($products as $product) {
                     if (! empty($product['name'])) {
                         $items[] = $this->normalizePdfItem($product, $url);
+                        $count++;
                     }
                 }
+                Log::info('[Crawler] PDF extracted', ['url' => $url, 'items' => $count]);
             } catch (\Throwable $e) {
-                Log::warning('WebCrawlerService: PDF extraction failed', [
-                    'url' => $url,
-                    'error' => $e->getMessage(),
-                ]);
+                Log::warning('[Crawler] PDF extraction failed', ['url' => $url, 'error' => $e->getMessage()]);
             } finally {
                 if ($tmpPath && file_exists($tmpPath)) {
                     @unlink($tmpPath);
