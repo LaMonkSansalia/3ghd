@@ -123,7 +123,7 @@ class WebCrawlerService
         }
 
         // Phase 3 — PDF extraction
-        $allPdfUrls = array_unique(array_slice($allPdfUrls, 0, self::MAX_PDFS_TO_EXTRACT));
+        $allPdfUrls = array_slice(array_unique($allPdfUrls), 0, self::MAX_PDFS_TO_EXTRACT);
 
         Log::info('[Crawler] Phase 3 — PDF extraction', ['pdf_count' => count($allPdfUrls), 'urls' => $allPdfUrls]);
 
