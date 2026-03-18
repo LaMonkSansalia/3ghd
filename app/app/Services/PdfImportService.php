@@ -73,7 +73,7 @@ class PdfImportService
     private function parseWithOllama(string $content): array
     {
         $url = config('services.ollama.url', 'http://studio_ollama:11434');
-        $model = config('services.ollama.model', 'qwen2.5vl:3b');
+        $model = config('services.ollama.model', 'qwen2.5:3b');
 
         Log::error('[PDF] ollama call start', ['model' => $model, 'content_len' => strlen($content)]);
         $response = Http::timeout(self::API_TIMEOUT)

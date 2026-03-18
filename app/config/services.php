@@ -42,7 +42,7 @@ return [
 
     'ollama' => [
         'url' => env('OLLAMA_URL', 'http://studio_ollama:11434'),
-        'model' => env('OLLAMA_MODEL', 'qwen2.5vl:3b'),
+        'model' => env('OLLAMA_MODEL', 'qwen2.5:3b'),
     ],
 
 ];

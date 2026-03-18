@@ -116,7 +116,7 @@ class WebCrawlerService
     private function extractWithOllama(string $content, string $sourceUrl): array
     {
         $url = config('services.ollama.url', 'http://studio_ollama:11434');
-        $model = config('services.ollama.model', 'qwen2.5vl:3b');
+        $model = config('services.ollama.model', 'qwen2.5:3b');
 
         $response = Http::timeout(self::API_TIMEOUT)
             ->post("{$url}/api/generate", [
