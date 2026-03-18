@@ -488,6 +488,28 @@ class WebCrawlerService
             return rtrim($baseUrl, '/').'/'.$link;
         }, $found);
 
+        // Also extract PDFs embedded via 3D Flip Book plugin (FB3D_CLIENT_DATA.push('base64...'))
+        if (preg_match_all("/FB3D_CLIENT_DATA\.push\('([A-Za-z0-9+\/=]+)'\)/", $html, $fb3d)) {
+            foreach ($fb3d[1] as $b64) {
+                $decoded = base64_decode($b64, strict: true);
+                if ($decoded === false) {
+                    continue;
+                }
+                $data = json_decode($decoded, true);
+                if (! is_array($data)) {
+                    continue;
+                }
+                foreach ($data['posts'] ?? [] as $post) {
+                    if (($post['type'] ?? '') === 'pdf') {
+                        $guid = $post['data']['guid'] ?? null;
+                        if ($guid && str_ends_with(strtolower($guid), '.pdf')) {
+                            $resolved[] = $guid;
+                        }
+                    }
+                }
+            }
+        }
+
         return array_unique($resolved);
     }
 
