@@ -17,7 +17,9 @@ class WebCrawlerService
 
     private const MAX_PAGES_TO_CRAWL = 15;
 
-    private const MAX_PDFS_TO_EXTRACT = 15;
+    private const MAX_PDFS_TO_EXTRACT = 25;
+
+    private const MAX_PRODUCT_PAGES_TO_SCAN = 100;
 
     /** Domains that serve PDF viewers rather than direct files */
     private const VIEWER_DOMAINS = [
@@ -104,11 +106,15 @@ class WebCrawlerService
             array_unique($productPageLinks),
             fn ($u) => ! isset($alreadyCrawled[$u])
         ));
-        $productPageLinks = array_slice($productPageLinks, 0, self::MAX_PAGES_TO_CRAWL);
+        $productPageLinks = array_slice($productPageLinks, 0, self::MAX_PRODUCT_PAGES_TO_SCAN);
 
         if (! empty($productPageLinks)) {
-            Log::info('[Crawler] Phase 2.5 — product pages PDF scan', ['count' => count($productPageLinks), 'urls' => $productPageLinks]);
+            Log::info('[Crawler] Phase 2.5 — product pages PDF scan', ['count' => count($productPageLinks)]);
             foreach ($productPageLinks as $productPageUrl) {
+                if (count(array_unique($allPdfUrls)) >= self::MAX_PDFS_TO_EXTRACT) {
+                    Log::info('[Crawler] Phase 2.5 — early exit, enough PDFs collected');
+                    break;
+                }
                 try {
                     $productHtml = $this->fetchPage($productPageUrl);
                     $pdfLinks = $this->findPdfLinks($productHtml, $productPageUrl);
@@ -547,6 +553,9 @@ class WebCrawlerService
         $resolved = array_map(function (string $link) use ($origin, $baseUrl): string {
             if (str_starts_with($link, 'http')) {
                 return $link;
+            }
+            if (str_starts_with($link, '//')) {
+                return 'https:'.$link;
             }
             if (str_starts_with($link, '/')) {
                 return $origin.$link;
