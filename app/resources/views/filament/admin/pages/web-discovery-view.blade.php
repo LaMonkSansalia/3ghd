@@ -1,7 +1,12 @@
 <x-filament-panels::page>
 
+    @php
+        $pdfCount  = count(array_filter($editableItems, fn($i) => ($i['source'] ?? 'html') === 'pdf'));
+        $htmlCount = count($editableItems) - $pdfCount;
+    @endphp
+
     {{-- Status bar --}}
-    <div class="flex items-center gap-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 shadow-sm">
+    <div class="flex items-center gap-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 shadow-sm flex-wrap">
         <div>
             <p class="text-xs text-gray-400 uppercase tracking-wider">Fornitore</p>
             <p class="font-semibold text-gray-900 dark:text-white">{{ $this->record->supplier->name }}</p>
@@ -15,6 +20,14 @@
         <div class="border-l border-gray-200 dark:border-gray-700 pl-4">
             <p class="text-xs text-gray-400 uppercase tracking-wider">Trovati</p>
             <p class="font-bold text-2xl text-teal-600">{{ $this->record->items_found }}</p>
+        </div>
+        <div class="border-l border-gray-200 dark:border-gray-700 pl-4">
+            <p class="text-xs text-gray-400 uppercase tracking-wider">Da PDF</p>
+            <p class="font-bold text-2xl text-amber-600">{{ $pdfCount }}</p>
+        </div>
+        <div class="border-l border-gray-200 dark:border-gray-700 pl-4">
+            <p class="text-xs text-gray-400 uppercase tracking-wider">Da HTML</p>
+            <p class="font-bold text-2xl text-blue-500">{{ $htmlCount }}</p>
         </div>
         <div class="border-l border-gray-200 dark:border-gray-700 pl-4">
             <p class="text-xs text-gray-400 uppercase tracking-wider">Importati</p>
@@ -48,6 +61,22 @@
     {{-- Editable table --}}
     @if(count($editableItems) > 0)
 
+        {{-- Filter tabs --}}
+        <div style="display:flex;gap:6px;align-items:center;">
+            <button
+                wire:click="$set('sourceFilter','all')"
+                style="font-size:12px;padding:4px 12px;border-radius:999px;border:1px solid {{ $sourceFilter === 'all' ? '#0D9488' : '#e5e7eb' }};background:{{ $sourceFilter === 'all' ? '#0D9488' : 'transparent' }};color:{{ $sourceFilter === 'all' ? '#fff' : '#6b7280' }};cursor:pointer;font-weight:500;"
+            >Tutti ({{ count($editableItems) }})</button>
+            <button
+                wire:click="$set('sourceFilter','pdf')"
+                style="font-size:12px;padding:4px 12px;border-radius:999px;border:1px solid {{ $sourceFilter === 'pdf' ? '#c2410c' : '#e5e7eb' }};background:{{ $sourceFilter === 'pdf' ? '#c2410c' : 'transparent' }};color:{{ $sourceFilter === 'pdf' ? '#fff' : '#6b7280' }};cursor:pointer;font-weight:500;"
+            >PDF ({{ $pdfCount }})</button>
+            <button
+                wire:click="$set('sourceFilter','html')"
+                style="font-size:12px;padding:4px 12px;border-radius:999px;border:1px solid {{ $sourceFilter === 'html' ? '#1d4ed8' : '#e5e7eb' }};background:{{ $sourceFilter === 'html' ? '#1d4ed8' : 'transparent' }};color:{{ $sourceFilter === 'html' ? '#fff' : '#6b7280' }};cursor:pointer;font-weight:500;"
+            >HTML ({{ $htmlCount }})</button>
+        </div>
+
         <div class="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-sm overflow-hidden">
             <div class="overflow-x-auto">
                 <table style="width:100%;border-collapse:collapse;">
@@ -66,18 +95,22 @@
                             <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;" class="text-gray-500 dark:text-gray-400">Collezione</th>
                             <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;" class="text-gray-500 dark:text-gray-400">Descrizione</th>
                             <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;" class="text-gray-500 dark:text-gray-400">Dati PDF</th>
-                            <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;" class="text-gray-500 dark:text-gray-400">URL</th>
+                            <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;" class="text-gray-500 dark:text-gray-400">Sorgente</th>
                             <th style="padding:10px 12px;text-align:center;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;" class="text-gray-500 dark:text-gray-400">Stato</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach($editableItems as $idx => $item)
                             @php
+                                $itemSource = $item['source'] ?? 'html';
+                                if ($sourceFilter !== 'all' && $itemSource !== $sourceFilter) { continue; }
                                 $isSelected = in_array($idx, $selectedItems);
                                 $isImported = $item['imported'] ?? false;
+                                $isPdf = $itemSource === 'pdf';
+                                $rowBg = $isImported ? 'opacity:0.5;' : ($isPdf ? 'background-color:rgba(251,191,36,.06);' : ($isSelected ? 'background-color:rgba(13,148,136,.05);' : ''));
                             @endphp
                             <tr
-                                style="border-bottom:1px solid #f3f4f6;{{ $isImported ? 'opacity:0.5;' : ($isSelected ? 'background-color:rgba(13,148,136,.05);' : '') }}"
+                                style="border-bottom:1px solid #f3f4f6;{{ $rowBg }}{{ $isPdf ? 'border-left:3px solid #f59e0b;' : '' }}"
                                 class="dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/40"
                             >
                                 {{-- Checkbox --}}
@@ -103,8 +136,8 @@
                                         <option value="collection" {{ ($item['type'] ?? '') === 'collection' ? 'selected' : '' }}>Collezione</option>
                                         <option value="product" {{ ($item['type'] ?? '') !== 'collection' ? 'selected' : '' }}>Prodotto</option>
                                     </select>
-                                    @if(($item['source'] ?? 'html') === 'pdf')
-                                        <span style="display:block;margin-top:3px;font-size:10px;background:#fed7aa;color:#c2410c;padding:1px 6px;border-radius:9999px;width:fit-content;">PDF</span>
+                                    @if($isPdf)
+                                        <span style="display:block;margin-top:3px;font-size:10px;background:#fed7aa;color:#c2410c;padding:1px 6px;border-radius:9999px;width:fit-content;font-weight:600;">PDF</span>
                                     @endif
                                 </td>
 
@@ -162,18 +195,25 @@
                                     @endif
                                 </td>
 
-                                {{-- URL --}}
-                                <td style="padding:8px 12px;max-width:160px;">
-                                    @if(!empty($item['url']))
+                                {{-- Sorgente (PDF filename o URL pagina) --}}
+                                <td style="padding:8px 12px;max-width:180px;">
+                                    @if($isPdf && !empty($item['source_url']))
+                                        @php $pdfFile = basename(parse_url($item['source_url'], PHP_URL_PATH)); @endphp
+                                        <a
+                                            href="{{ $item['source_url'] }}"
+                                            target="_blank"
+                                            wire:click.stop
+                                            style="font-size:11px;color:#c2410c;text-decoration:none;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;"
+                                            title="{{ $item['source_url'] }}"
+                                        >{{ $pdfFile }}</a>
+                                    @elseif(!empty($item['url']))
                                         <a
                                             href="{{ $item['url'] }}"
                                             target="_blank"
                                             wire:click.stop
                                             style="font-size:11px;color:#0D9488;text-decoration:none;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
                                             title="{{ $item['url'] }}"
-                                        >
-                                            {{ parse_url($item['url'], PHP_URL_HOST) }}
-                                        </a>
+                                        >{{ parse_url($item['url'], PHP_URL_HOST) }}</a>
                                     @else
                                         <span class="text-gray-400" style="font-size:12px;">—</span>
                                     @endif

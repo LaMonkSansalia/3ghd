@@ -16,6 +16,7 @@ class ViewWebDiscovery extends ViewRecord
 
     public array $editableItems = [];
     public array $selectedItems = [];
+    public string $sourceFilter = 'all';
 
     public function mount(int|string $record): void
     {
