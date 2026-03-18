@@ -73,6 +73,7 @@ class ImportProductsJob implements ShouldQueue
                         'name'        => $name,
                         'sku'         => $sku ?: null,
                         'brand'       => trim($this->getValue($row, 'brand')) ?: null,
+                        'collection'  => trim($this->getValue($row, 'collection')) ?: null,
                         'description' => trim($this->getValue($row, 'description')) ?: null,
                         'materials'   => trim($this->getValue($row, 'materials')) ?: null,
                         'price_list'  => $this->decimal($this->getValue($row, 'price_list')),

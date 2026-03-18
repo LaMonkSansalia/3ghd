@@ -25,7 +25,7 @@ class WebAnalysisPage extends Page implements HasForms
     protected static \BackedEnum|string|null $navigationIcon  = 'heroicon-o-globe-alt';
     protected static ?string $navigationLabel = 'Analisi Sito Fornitore';
     protected static \UnitEnum|string|null $navigationGroup = 'Catalogo';
-    protected static ?int    $navigationSort  = 11;
+    protected static ?int    $navigationSort  = 12;
     protected static ?string $title           = 'Analisi Sito Web Fornitore';
 
     public ?array $formData = [];

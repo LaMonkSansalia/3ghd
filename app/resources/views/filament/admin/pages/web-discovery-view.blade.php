@@ -45,79 +45,158 @@
         </div>
     @endif
 
-    {{-- Items grid --}}
-    @php $items = $this->record->items ?? []; @endphp
+    {{-- Editable table --}}
+    @if(count($editableItems) > 0)
 
-    @if(count($items) > 0)
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            @foreach($items as $idx => $item)
-                @php
-                    $isSelected = in_array($idx, $selectedItems);
-                    $isImported = $item['imported'] ?? false;
-                @endphp
-                <div
-                    wire:click="toggleItem({{ $idx }})"
-                    class="relative cursor-pointer rounded-xl border-2 transition-all
-                        {{ $isImported ? 'border-gray-200 bg-gray-50 dark:bg-gray-900 opacity-60' : ($isSelected ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/20' : 'border-gray-200 bg-white dark:bg-gray-900 hover:border-teal-300') }}"
-                >
-                    {{-- Selection checkbox --}}
-                    <div class="absolute top-3 right-3">
-                        @if($isImported)
-                            <span class="text-xs bg-gray-200 dark:bg-gray-700 text-gray-500 rounded-full px-2 py-0.5">importato</span>
-                        @elseif($isSelected)
-                            <div class="w-5 h-5 rounded bg-teal-500 flex items-center justify-center">
-                                <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
-                            </div>
-                        @else
-                            <div class="w-5 h-5 rounded border-2 border-gray-300 dark:border-gray-600"></div>
-                        @endif
-                    </div>
+        <div class="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+                <table style="width:100%;border-collapse:collapse;">
+                    <thead>
+                        <tr style="border-bottom:2px solid #e5e7eb;" class="dark:border-gray-700">
+                            <th style="width:40px;padding:10px 12px;text-align:center;">
+                                <input
+                                    type="checkbox"
+                                    wire:click="toggleAll"
+                                    {{ count($selectedItems) === count(array_filter($editableItems, fn($i) => !($i['imported'] ?? false))) && count($selectedItems) > 0 ? 'checked' : '' }}
+                                    style="width:16px;height:16px;cursor:pointer;accent-color:#0D9488;"
+                                />
+                            </th>
+                            <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;" class="text-gray-500 dark:text-gray-400">Tipo</th>
+                            <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;" class="text-gray-500 dark:text-gray-400">Nome</th>
+                            <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;" class="text-gray-500 dark:text-gray-400">Collezione</th>
+                            <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;" class="text-gray-500 dark:text-gray-400">Descrizione</th>
+                            <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;" class="text-gray-500 dark:text-gray-400">Dati PDF</th>
+                            <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;" class="text-gray-500 dark:text-gray-400">URL</th>
+                            <th style="padding:10px 12px;text-align:center;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;" class="text-gray-500 dark:text-gray-400">Stato</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($editableItems as $idx => $item)
+                            @php
+                                $isSelected = in_array($idx, $selectedItems);
+                                $isImported = $item['imported'] ?? false;
+                            @endphp
+                            <tr
+                                style="border-bottom:1px solid #f3f4f6;{{ $isImported ? 'opacity:0.5;' : ($isSelected ? 'background-color:rgba(13,148,136,.05);' : '') }}"
+                                class="dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/40"
+                            >
+                                {{-- Checkbox --}}
+                                <td style="padding:8px 12px;text-align:center;">
+                                    @if($isImported)
+                                        <span style="color:#9ca3af;font-size:18px;">✓</span>
+                                    @else
+                                        <input
+                                            type="checkbox"
+                                            wire:click="toggleItem({{ $idx }})"
+                                            {{ $isSelected ? 'checked' : '' }}
+                                            style="width:16px;height:16px;cursor:pointer;accent-color:#0D9488;"
+                                        />
+                                    @endif
+                                </td>
 
-                    <div class="p-4">
-                        {{-- Type badge --}}
-                        <span class="inline-block text-xs px-2 py-0.5 rounded-full mb-2
-                            {{ $item['type'] === 'collection' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700' }}">
-                            {{ $item['type'] === 'collection' ? 'Collezione' : 'Prodotto' }}
-                        </span>
+                                {{-- Tipo + source badge --}}
+                                <td style="padding:8px 12px;white-space:nowrap;">
+                                    <select
+                                        wire:model.blur="editableItems.{{ $idx }}.type"
+                                        style="font-size:11px;padding:2px 6px;border-radius:999px;border:1px solid #e5e7eb;background:{{ $item['type'] === 'collection' ? '#f3e8ff' : '#eff6ff' }};color:{{ $item['type'] === 'collection' ? '#7e22ce' : '#1d4ed8' }};cursor:pointer;"
+                                    >
+                                        <option value="collection" {{ ($item['type'] ?? '') === 'collection' ? 'selected' : '' }}>Collezione</option>
+                                        <option value="product" {{ ($item['type'] ?? '') !== 'collection' ? 'selected' : '' }}>Prodotto</option>
+                                    </select>
+                                    @if(($item['source'] ?? 'html') === 'pdf')
+                                        <span style="display:block;margin-top:3px;font-size:10px;background:#fed7aa;color:#c2410c;padding:1px 6px;border-radius:9999px;width:fit-content;">PDF</span>
+                                    @endif
+                                </td>
 
-                        {{-- Name --}}
-                        <h3 class="font-semibold text-gray-900 dark:text-white text-sm leading-snug pr-6">
-                            {{ $item['name'] }}
-                        </h3>
+                                {{-- Nome (editabile) --}}
+                                <td style="padding:8px 12px;min-width:180px;">
+                                    <input
+                                        type="text"
+                                        wire:model.blur="editableItems.{{ $idx }}.name"
+                                        style="width:100%;padding:4px 8px;border:1px solid transparent;border-radius:6px;font-size:13px;font-weight:500;background:transparent;box-sizing:border-box;"
+                                        class="text-gray-900 dark:text-white hover:border-gray-300 dark:hover:border-gray-600 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500 dark:bg-transparent"
+                                        placeholder="Nome prodotto"
+                                    />
+                                </td>
 
-                        {{-- Description --}}
-                        @if(!empty($item['description']))
-                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
-                                {{ $item['description'] }}
-                            </p>
-                        @endif
+                                {{-- Collezione (editabile) --}}
+                                <td style="padding:8px 12px;min-width:140px;">
+                                    <input
+                                        type="text"
+                                        wire:model.blur="editableItems.{{ $idx }}.collection"
+                                        style="width:100%;padding:4px 8px;border:1px solid transparent;border-radius:6px;font-size:13px;background:transparent;box-sizing:border-box;"
+                                        class="text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500 dark:bg-transparent"
+                                        placeholder="—"
+                                    />
+                                </td>
 
-                        {{-- URL --}}
-                        <a href="{{ $item['url'] }}" target="_blank" wire:click.stop
-                           class="text-xs text-teal-600 hover:underline mt-2 block truncate">
-                            {{ parse_url($item['url'], PHP_URL_HOST) }}{{ parse_url($item['url'], PHP_URL_PATH) }}
-                        </a>
+                                {{-- Descrizione (editabile) --}}
+                                <td style="padding:8px 12px;min-width:220px;max-width:320px;">
+                                    <textarea
+                                        wire:model.blur="editableItems.{{ $idx }}.description"
+                                        rows="2"
+                                        style="width:100%;padding:4px 8px;border:1px solid transparent;border-radius:6px;font-size:12px;line-height:1.4;background:transparent;resize:vertical;box-sizing:border-box;"
+                                        class="text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500 dark:bg-transparent"
+                                        placeholder="—"
+                                    >{{ $item['description'] ?? '' }}</textarea>
+                                </td>
 
-                        {{-- Sub-items (h2s) --}}
-                        @if(!empty($item['h2s']))
-                            <div class="mt-2 flex flex-wrap gap-1">
-                                @foreach(array_slice($item['h2s'], 0, 4) as $h2)
-                                    <span class="text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded px-1.5 py-0.5">
-                                        {{ $h2 }}
-                                    </span>
-                                @endforeach
-                                @if(count($item['h2s']) > 4)
-                                    <span class="text-xs text-gray-400">+{{ count($item['h2s']) - 4 }}</span>
-                                @endif
-                            </div>
-                        @endif
-                    </div>
-                </div>
-            @endforeach
+                                {{-- Dati PDF (sku, price_list, dimensions) --}}
+                                <td style="padding:8px 12px;min-width:120px;white-space:nowrap;">
+                                    @if(!empty($item['sku']))
+                                        <p style="font-size:11px;color:#6b7280;margin:0 0 2px;">SKU: <strong>{{ $item['sku'] }}</strong></p>
+                                    @endif
+                                    @if(!empty($item['price_list']))
+                                        <p style="font-size:11px;color:#0D9488;font-weight:600;margin:0 0 2px;">€ {{ number_format((float)$item['price_list'], 2) }}</p>
+                                    @endif
+                                    @if(!empty($item['dimensions']))
+                                        @php $d = $item['dimensions']; @endphp
+                                        <p style="font-size:10px;color:#9ca3af;margin:0;">
+                                            {{ ($d['width'] ?? $d['l'] ?? null) ? 'L'.($d['width'] ?? $d['l']) : '' }}
+                                            {{ ($d['depth'] ?? $d['p'] ?? null) ? '×P'.($d['depth'] ?? $d['p']) : '' }}
+                                            {{ ($d['height'] ?? $d['h'] ?? null) ? '×H'.($d['height'] ?? $d['h']) : '' }} cm
+                                        </p>
+                                    @endif
+                                    @if(empty($item['sku']) && empty($item['price_list']) && empty($item['dimensions']))
+                                        <span style="font-size:12px;color:#d1d5db;">—</span>
+                                    @endif
+                                </td>
+
+                                {{-- URL --}}
+                                <td style="padding:8px 12px;max-width:160px;">
+                                    @if(!empty($item['url']))
+                                        <a
+                                            href="{{ $item['url'] }}"
+                                            target="_blank"
+                                            wire:click.stop
+                                            style="font-size:11px;color:#0D9488;text-decoration:none;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
+                                            title="{{ $item['url'] }}"
+                                        >
+                                            {{ parse_url($item['url'], PHP_URL_HOST) }}
+                                        </a>
+                                    @else
+                                        <span class="text-gray-400" style="font-size:12px;">—</span>
+                                    @endif
+                                </td>
+
+                                {{-- Stato --}}
+                                <td style="padding:8px 12px;text-align:center;white-space:nowrap;">
+                                    @if($isImported)
+                                        <span style="font-size:11px;padding:2px 8px;border-radius:999px;background:#f3f4f6;color:#6b7280;">importato</span>
+                                    @else
+                                        <span style="font-size:11px;padding:2px 8px;border-radius:999px;background:#f0fdf4;color:#16a34a;">pronto</span>
+                                    @endif
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
         </div>
+
     @elseif($this->record->status === 'done')
         <div class="text-center py-12 text-gray-400">
-            <svg class="mx-auto h-12 w-12 mb-3 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            <svg class="mx-auto mb-3 opacity-40" style="width:48px;height:48px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
             <p>Nessun elemento trovato. Il sito potrebbe richiedere JavaScript per caricare i contenuti.</p>
         </div>
     @endif

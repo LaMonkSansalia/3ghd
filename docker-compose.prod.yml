@@ -115,6 +115,16 @@ services:
       studio_redis:
         condition: service_started
 
+  studio_ollama:
+    image: ollama/ollama:latest
+    container_name: studio3ghd_ollama
+    restart: unless-stopped
+    # Nessuna porta esposta — raggiungibile solo dalla rete interna su porta 11434
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - studio_internal
+
 networks:
   studio_internal:
     driver: bridge
@@ -123,3 +133,4 @@ networks:
 
 volumes:
   studio_db_data:
+  ollama_data:

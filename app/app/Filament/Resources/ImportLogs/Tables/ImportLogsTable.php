@@ -4,7 +4,6 @@ namespace App\Filament\Resources\ImportLogs\Tables;
 
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
-use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -25,30 +24,35 @@ class ImportLogsTable
                     ->sortable()
                     ->searchable(),
 
-                BadgeColumn::make('format')
+                TextColumn::make('format')
                     ->label('Formato')
-                    ->colors([
-                        'danger'  => 'pdf',
-                        'success' => ['csv', 'excel'],
-                        'info'    => 'web',
-                        'warning' => 'images',
-                        'gray'    => 'manual',
-                    ]),
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'pdf'    => 'danger',
+                        'csv'    => 'success',
+                        'excel'  => 'success',
+                        'web'    => 'info',
+                        'images' => 'warning',
+                        default  => 'gray',
+                    }),
 
-                BadgeColumn::make('status')
+                TextColumn::make('status')
                     ->label('Stato')
-                    ->colors([
-                        'gray'    => 'pending',
-                        'warning' => 'processing',
-                        'success' => 'done',
-                        'danger'  => 'failed',
-                    ])
-                    ->icons([
-                        'heroicon-o-clock'        => 'pending',
-                        'heroicon-o-arrow-path'   => 'processing',
-                        'heroicon-o-check-circle' => 'done',
-                        'heroicon-o-x-circle'     => 'failed',
-                    ]),
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'pending'    => 'gray',
+                        'processing' => 'warning',
+                        'done'       => 'success',
+                        'failed'     => 'danger',
+                        default      => 'gray',
+                    })
+                    ->icon(fn (string $state): string => match ($state) {
+                        'pending'    => 'heroicon-o-clock',
+                        'processing' => 'heroicon-o-arrow-path',
+                        'done'       => 'heroicon-o-check-circle',
+                        'failed'     => 'heroicon-o-x-circle',
+                        default      => 'heroicon-o-question-mark-circle',
+                    }),
 
                 TextColumn::make('total_rows')
                     ->label('Righe')

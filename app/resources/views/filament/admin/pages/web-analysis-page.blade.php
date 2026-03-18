@@ -8,9 +8,7 @@
             <br><em class="text-amber-600 text-xs">I prezzi non sono disponibili sul web — andranno inseriti tramite Import Catalogo.</em>
         </x-slot>
 
-        <x-filament-panels::form>
-            {{ $this->form }}
-        </x-filament-panels::form>
+        {{ $this->form }}
 
         <div class="mt-4">
             <x-filament::button

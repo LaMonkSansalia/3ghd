@@ -38,10 +38,8 @@ class PdfImportService
 
     private function extractText(string $filePath): string
     {
-        Log::error('[PDF] pdftotext start', ['file' => basename($filePath)]);
         $escaped = escapeshellarg($filePath);
         $output = shell_exec("pdftotext -layout {$escaped} - 2>/dev/null");
-        Log::error('[PDF] pdftotext done', ['bytes' => strlen((string) $output)]);
 
         if ($output === null || $output === false) {
             return '';
@@ -59,7 +57,7 @@ class PdfImportService
         return mb_strlen(trim($text)) >= self::MIN_TEXT_LENGTH;
     }
 
-    // ── AI API — Ollama (default) o Anthropic (se ANTHROPIC_API_KEY è presente) ──
+    // ── AI API — Anthropic Haiku ──────────────────────────────────────────
 
     private function parseWithClaude(string $content): array
     {
@@ -67,7 +65,9 @@ class PdfImportService
             return $this->parseWithAnthropic($content);
         }
 
-        return $this->parseWithOllama($content);
+        Log::warning('PdfImportService: ANTHROPIC_API_KEY non configurata');
+
+        return [];
     }
 
     private function parseWithOllama(string $content): array
@@ -75,7 +75,6 @@ class PdfImportService
         $url = config('services.ollama.url', 'http://studio_ollama:11434');
         $model = config('services.ollama.model', 'qwen2.5:3b');
 
-        Log::error('[PDF] ollama call start', ['model' => $model, 'content_len' => strlen($content)]);
         $response = Http::timeout(self::API_TIMEOUT)
             ->post("{$url}/api/generate", [
                 'model' => $model,
@@ -83,7 +82,6 @@ class PdfImportService
                 'stream' => false,
                 'format' => 'json',
             ]);
-        Log::error('[PDF] ollama call done', ['status' => $response->status()]);
 
         if (! $response->successful()) {
             Log::error('PdfImportService: Ollama error', [
@@ -161,15 +159,17 @@ class PdfImportService
 
     private function parseResponse(string $text): array
     {
-        // Handle both {"products":[...]} (Ollama format) and [...] (Anthropic format)
+        // Strip markdown code blocks (```json ... ```)
+        $text = preg_replace('/```(?:json)?\s*([\s\S]*?)```/s', '$1', $text);
+        $text = trim($text);
+
         $decoded = json_decode($text, true);
         if (is_array($decoded)) {
             $items = $decoded['products'] ?? $decoded;
         } else {
-            // Fallback: extract first array or object.products from text
-            if (preg_match('/"products"\s*:\s*(\[[\s\S]*?\])/m', $text, $m)) {
+            if (preg_match('/"products"\s*:\s*(\[[\s\S]*\])\s*\}/s', $text, $m)) {
                 $items = json_decode($m[1], true) ?? [];
-            } elseif (preg_match('/(\[[\s\S]*\])/m', $text, $m)) {
+            } elseif (preg_match('/(\[[\s\S]*\])/s', $text, $m)) {
                 $items = json_decode($m[1], true) ?? [];
             } else {
                 Log::warning('PdfImportService: nessun JSON nella risposta', [

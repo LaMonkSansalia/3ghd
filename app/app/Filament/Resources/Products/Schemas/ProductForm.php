@@ -3,8 +3,9 @@
 namespace App\Filament\Resources\Products\Schemas;
 
 use Filament\Forms\Components\KeyValue;
-use Filament\Forms\Components\Section;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
+use Filament\Schemas\Components\Section;
 use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -21,6 +22,11 @@ class ProductForm
                 Section::make('Informazioni principali')
                     ->columns(2)
                     ->schema([
+                        Placeholder::make('product_code')
+                            ->label('Codice interno')
+                            ->content(fn ($record) => $record?->product_code ?? '(generato al salvataggio)')
+                            ->columnSpanFull(),
+
                         TextInput::make('name')
                             ->label('Nome prodotto')
                             ->required()

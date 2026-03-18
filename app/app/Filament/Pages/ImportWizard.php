@@ -7,10 +7,10 @@ use App\Models\ImportLog;
 use App\Models\Supplier;
 use App\Services\SpreadsheetParser;
 use Filament\Forms\Components\FileUpload;
-use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Wizard;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Wizard;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Notifications\Notification;
@@ -84,15 +84,28 @@ class ImportWizard extends Page implements HasForms
                                 ->required()
                                 ->live()
                                 ->afterStateUpdated(function ($state, $livewire) {
-                                    if (! $state) {
-                                        $livewire->parsedHeaders = [];
-                                        $livewire->parsedPreview = [];
+                                    // Filament v5 / Livewire 3: state is TemporaryUploadedFile or array thereof.
+                                    $file = is_array($state) ? ($state[0] ?? null) : $state;
+
+                                    if (! $file) {
+                                        $livewire->parsedHeaders   = [];
+                                        $livewire->parsedPreview   = [];
+                                        $livewire->parsedTotalRows = 0;
+                                        return;
+                                    }
+
+                                    $path = ($file instanceof \Livewire\Features\SupportFileUploads\TemporaryUploadedFile)
+                                        ? $file->getRealPath()
+                                        : Storage::disk('local')->path((string) $file);
+
+                                    if (! $path || ! file_exists($path)) {
+                                        $livewire->parsedHeaders   = [];
+                                        $livewire->parsedPreview   = [];
                                         $livewire->parsedTotalRows = 0;
                                         return;
                                     }
 
                                     try {
-                                        $path = Storage::disk('local')->path($state);
                                         $parser = app(SpreadsheetParser::class);
                                         $result = $parser->parse($path);
 
@@ -100,7 +113,7 @@ class ImportWizard extends Page implements HasForms
                                         $livewire->parsedPreview   = $result['preview'];
                                         $livewire->parsedTotalRows = $result['total_rows'];
 
-                                        $ext = strtolower(pathinfo($state, PATHINFO_EXTENSION));
+                                        $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
                                         $livewire->detectedFormat = match ($ext) {
                                             'csv'  => 'csv',
                                             'xlsx' => 'excel',
@@ -159,6 +172,11 @@ class ImportWizard extends Page implements HasForms
 
                                     Select::make('mapping.sku')
                                         ->label('Codice / SKU')
+                                        ->options(fn ($livewire) => $livewire->headerOptions())
+                                        ->placeholder('-- Non mappato --'),
+
+                                    Select::make('mapping.collection')
+                                        ->label('Collezione / Serie')
                                         ->options(fn ($livewire) => $livewire->headerOptions())
                                         ->placeholder('-- Non mappato --'),
 
@@ -283,7 +301,11 @@ class ImportWizard extends Page implements HasForms
             ? (Supplier::find($supplierId)?->name ?? "ID $supplierId")
             : '—';
 
-        $file    = $data['file'] ?? '—';
+        $rawFile = $data['file'] ?? null;
+        $rawFile = is_array($rawFile) ? ($rawFile[0] ?? null) : $rawFile;
+        $file    = ($rawFile instanceof \Livewire\Features\SupportFileUploads\TemporaryUploadedFile)
+            ? $rawFile->getClientOriginalName()
+            : ($rawFile ? (string) $rawFile : '—');
         $rows    = $this->parsedTotalRows;
         $format  = strtoupper($this->detectedFormat ?: '—');
         $mapping = $data['mapping'] ?? [];
@@ -293,6 +315,7 @@ class ImportWizard extends Page implements HasForms
         $labels = [
             'name'        => 'Nome prodotto',
             'sku'         => 'Codice / SKU',
+            'collection'  => 'Collezione / Serie',
             'brand'       => 'Brand',
             'description' => 'Descrizione',
             'materials'   => 'Materiali',
@@ -345,7 +368,9 @@ class ImportWizard extends Page implements HasForms
         $data = $this->form->getState();
 
         $supplierId = $data['supplier_id'] ?? null;
-        $file       = $data['file'] ?? null;
+        // Filament v5: FileUpload may return array even for single upload
+        $rawFile    = $data['file'] ?? null;
+        $file       = is_array($rawFile) ? ($rawFile[0] ?? null) : $rawFile;
         $mapping    = $data['mapping'] ?? [];
 
         if (! $supplierId || ! $file) {

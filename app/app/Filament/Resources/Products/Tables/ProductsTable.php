@@ -20,13 +20,21 @@ class ProductsTable
     {
         return $table
             ->columns([
-                ImageColumn::make('first_media_url')
+                ImageColumn::make('thumbnail')
                     ->label('')
-                    ->defaultImageUrl(fn () => null)
+                    ->getStateUsing(fn (\App\Models\Product $record): string => $record->getFirstMediaUrl('images', 'thumb'))
                     ->width(80)
                     ->height(60)
                     ->extraImgAttributes(['class' => 'object-cover rounded'])
                     ->toggleable(),
+
+                TextColumn::make('product_code')
+                    ->label('Cod.')
+                    ->badge()
+                    ->color('gray')
+                    ->searchable()
+                    ->sortable()
+                    ->placeholder('—'),
 
                 TextColumn::make('name')
                     ->label('Prodotto')

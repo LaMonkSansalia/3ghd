@@ -17,21 +17,36 @@ class Product extends Model implements HasMedia
         'description', 'materials', 'colors', 'finishes', 'dimensions',
         'price_list', 'cost', 'markup_override', 'tags', 'notes',
         'source_url', 'source_file', 'is_active', 'is_featured', 'is_available',
+        'product_code',
     ];
 
-    protected $casts = [
-        'materials'       => 'array',
-        'colors'          => 'array',
-        'finishes'        => 'array',
-        'dimensions'      => 'array',
-        'tags'            => 'array',
-        'price_list'      => 'decimal:2',
-        'cost'            => 'decimal:2',
-        'markup_override' => 'decimal:4',
-        'is_active'       => 'boolean',
-        'is_featured'     => 'boolean',
-        'is_available'    => 'boolean',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'materials'       => 'array',
+            'colors'          => 'array',
+            'finishes'        => 'array',
+            'dimensions'      => 'array',
+            'tags'            => 'array',
+            'price_list'      => 'decimal:2',
+            'cost'            => 'decimal:2',
+            'markup_override' => 'decimal:4',
+            'is_active'       => 'boolean',
+            'is_featured'     => 'boolean',
+            'is_available'    => 'boolean',
+        ];
+    }
+
+    protected static function booted(): void
+    {
+        static::created(function (Product $product): void {
+            if (! $product->product_code) {
+                $product->updateQuietly([
+                    'product_code' => 'P'.str_pad((string) $product->id, 4, '0', STR_PAD_LEFT),
+                ]);
+            }
+        });
+    }
 
     public function supplier(): BelongsTo
     {

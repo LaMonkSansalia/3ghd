@@ -16,7 +16,7 @@ class DiscoverWebsiteJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries   = 1;
-    public int $timeout = 180;
+    public int $timeout = 600;
 
     public function __construct(
         private int    $supplierId,

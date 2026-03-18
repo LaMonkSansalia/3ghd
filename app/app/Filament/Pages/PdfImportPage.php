@@ -10,7 +10,7 @@ use App\Services\PdfImportService;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Wizard;
+use Filament\Schemas\Components\Wizard;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Notifications\Notification;
@@ -83,16 +83,33 @@ class PdfImportPage extends Page implements HasForms
                                     $livewire->extractionDone    = false;
                                     $livewire->extractionError   = '';
 
-                                    if (! $state) {
+                                    // Filament v5 / Livewire 3: state is TemporaryUploadedFile or array thereof.
+                                    // Do NOT pass to Storage::disk()->path() — SplFileInfo __toString() gives wrong path.
+                                    // Use getRealPath() which returns the actual storage path.
+                                    $file = is_array($state) ? ($state[0] ?? null) : $state;
+                                    if (! $file) {
+                                        return;
+                                    }
+                                    $path = ($file instanceof \Livewire\Features\SupportFileUploads\TemporaryUploadedFile)
+                                        ? $file->getRealPath()
+                                        : Storage::disk('local')->path((string) $file);
+
+                                    \Illuminate\Support\Facades\Log::error('[PDF] path resolved', [
+                                        'path'   => $path,
+                                        'exists' => file_exists($path ?? ''),
+                                    ]);
+
+                                    if (! $path || ! file_exists($path)) {
                                         return;
                                     }
 
                                     try {
-                                        $path    = Storage::disk('local')->path($state);
+                                        \Illuminate\Support\Facades\Log::error('[PDF] calling extract');
                                         $service = app(PdfImportService::class);
 
                                         $livewire->extractedProducts = $service->extract($path);
                                         $livewire->extractionDone    = true;
+                                        \Illuminate\Support\Facades\Log::error('[PDF] extract done', ['count' => count($livewire->extractedProducts)]);
                                     } catch (\Throwable $e) {
                                         $livewire->extractionError = $e->getMessage();
 
@@ -231,8 +248,9 @@ class PdfImportPage extends Page implements HasForms
         $supplierName = $supplierId
             ? (Supplier::find($supplierId)?->name ?? "ID $supplierId")
             : '—';
-        $count = count($this->extractedProducts);
-        $file  = e(basename($data['file'] ?? '—'));
+        $count   = count($this->extractedProducts);
+        $rawFile = $data['file'] ?? null;
+        $file    = e(basename(is_array($rawFile) ? ($rawFile[0] ?? '—') : ($rawFile ?? '—')));
 
         return "<div class='space-y-4'>"
             . "<div class='grid grid-cols-3 gap-4'>"
@@ -273,7 +291,9 @@ class PdfImportPage extends Page implements HasForms
 
         $data       = $this->form->getState();
         $supplierId = $data['supplier_id'] ?? null;
-        $file       = $data['file'] ?? null;
+        // Filament v5: FileUpload may return array even for single upload
+        $rawFile    = $data['file'] ?? null;
+        $file       = is_array($rawFile) ? ($rawFile[0] ?? null) : $rawFile;
 
         if (! $supplierId) {
             Notification::make()
