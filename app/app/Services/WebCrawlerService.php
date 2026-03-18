@@ -23,6 +23,8 @@ class WebCrawlerService
     private const VIEWER_DOMAINS = [
         'issuu.com', 'fliphtml5.com', 'yumpu.com', 'calameo.com',
         'joomag.com', 'publuu.com', 'paperturn.com', 'heyzine.com',
+        'flipsnack.com', 'anyflip.com', 'simplebooklet.com', 'madmagz.com',
+        'e-pages.dk', 'myebook.com', 'flipbuilder.com', 'turboflip.com',
     ];
 
     /** Path keywords that suggest product/category pages */
@@ -465,9 +467,15 @@ class WebCrawlerService
         $origin = ($parsed['scheme'] ?? 'https').'://'.($parsed['host'] ?? '');
 
         $patterns = [
+            // Standard HTML links and attributes
             '/href=["\']([^"\']*\.pdf(?:\?[^"\']*)?)["\']/',
+            '/data-(?:src|href|pdf|url|file)=["\']([^"\']*\.pdf(?:\?[^"\']*)?)["\']/',
+            // Embedded viewers and objects
             '/<iframe[^>]+src=["\']([^"\']*\.pdf(?:\?[^"\']*)?)["\']/',
-            '/data-(?:src|href)=["\']([^"\']*\.pdf(?:\?[^"\']*)?)["\']/',
+            '/<object[^>]+data=["\']([^"\']*\.pdf(?:\?[^"\']*)?)["\']/',
+            '/<embed[^>]+src=["\']([^"\']*\.pdf(?:\?[^"\']*)?)["\']/',
+            // Preload / prefetch hints
+            '/<link[^>]+href=["\']([^"\']*\.pdf(?:\?[^"\']*)?)["\']/',
         ];
 
         $found = [];
@@ -507,6 +515,14 @@ class WebCrawlerService
                         }
                     }
                 }
+            }
+        }
+
+        // General JS string extraction: catches inline script PDF URLs
+        // (custom catalog players, WPDM config, JSON-LD, window variables, etc.)
+        if (preg_match_all('/"(https?:\/\/[^"\s<>]*\.pdf(?:\?[^"\s<>]*)?)"/i', $html, $jsM)) {
+            foreach ($jsM[1] as $jsUrl) {
+                $resolved[] = $jsUrl;
             }
         }
 
