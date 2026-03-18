@@ -58,7 +58,7 @@ class WebCrawlerService
         $pagesToAnalyze = array_unique(array_merge([$url], array_column($sectionUrls, 'url')));
         $pagesToAnalyze = array_slice($pagesToAnalyze, 0, self::MAX_PAGES_TO_CRAWL);
 
-        $htmlItems  = [];
+        $htmlItems = [];
         $allPdfUrls = [];
 
         foreach ($pagesToAnalyze as $pageUrl) {
@@ -66,25 +66,26 @@ class WebCrawlerService
                 $pageHtml = ($pageUrl === $url) ? $html : $this->fetchPage($pageUrl);
             } catch (\Throwable $e) {
                 Log::warning('WebCrawlerService: skip page on error', [
-                    'url'   => $pageUrl,
+                    'url' => $pageUrl,
                     'error' => $e->getMessage(),
                 ]);
+
                 continue;
             }
 
             $text = $this->extractText($pageHtml);
             if (! empty(trim($text))) {
-                $pageItems  = $this->extractWithClaude($text, $pageUrl);
-                $htmlItems  = array_merge($htmlItems, $pageItems);
+                $pageItems = $this->extractWithClaude($text, $pageUrl);
+                $htmlItems = array_merge($htmlItems, $pageItems);
             }
 
-            $pdfLinks   = $this->findPdfLinks($pageHtml, $pageUrl);
+            $pdfLinks = $this->findPdfLinks($pageHtml, $pageUrl);
             $allPdfUrls = array_merge($allPdfUrls, $pdfLinks);
         }
 
         // Phase 3 — PDF extraction
         $allPdfUrls = array_unique(array_slice($allPdfUrls, 0, self::MAX_PDFS_TO_EXTRACT));
-        $pdfItems   = ! empty($allPdfUrls) ? $this->extractFromPdfs($allPdfUrls) : [];
+        $pdfItems = ! empty($allPdfUrls) ? $this->extractFromPdfs($allPdfUrls) : [];
 
         // Merge: PDF items have priority (richer data); HTML fills in the rest
         $pdfNames = array_map(fn ($i) => mb_strtolower(trim($i['name'])), $pdfItems);
@@ -192,7 +193,7 @@ class WebCrawlerService
                     $response = Http::withoutVerifying()->timeout(self::FETCH_TIMEOUT)->get($loc);
                     if ($response->successful()) {
                         $child = $this->parseSitemap($response->body(), $origin, $depth + 1);
-                        $urls  = array_merge($urls, $child);
+                        $urls = array_merge($urls, $child);
                         if (count($urls) >= self::MAX_PAGES_TO_CRAWL) {
                             break;
                         }
@@ -259,14 +260,14 @@ class WebCrawlerService
             return rtrim($baseUrl, '/').'/'.$link;
         }, $links);
 
-        // Filter: product URLs on same domain
+        // Filter: same domain + not an excluded path (no PRODUCT_KEYWORDS check — nav is already curated)
         $filtered = array_filter($resolved, function (string $link) use ($parsed): bool {
             $lParsed = parse_url($link);
             if (($lParsed['host'] ?? '') !== ($parsed['host'] ?? '')) {
                 return false;
             }
 
-            return $this->isProductUrl($link);
+            return $this->isNotExcludedUrl($link);
         });
 
         return array_values(array_slice(
@@ -304,7 +305,7 @@ class WebCrawlerService
             return [];
         }
 
-        $prompt = "Sei un web crawler per siti italiani di arredamento. Analizza questo testo di navigazione "
+        $prompt = 'Sei un web crawler per siti italiani di arredamento. Analizza questo testo di navigazione '
             ."e restituisci le URL delle sezioni prodotto principali (cucine, living, armadi, bagni, ecc.).\n"
             ."Ignora: blog, contatti, chi siamo, privacy, login, fiere, news.\n\n"
             ."BASE URL: {$baseUrl}\n\n"
@@ -314,34 +315,34 @@ class WebCrawlerService
 
         try {
             $apiKey = config('services.anthropic.api_key');
-            $model  = config('services.anthropic.model', 'claude-haiku-4-5-20251001');
+            $model = config('services.anthropic.model', 'claude-haiku-4-5-20251001');
 
             $response = Http::withHeaders([
-                'x-api-key'         => $apiKey,
+                'x-api-key' => $apiKey,
                 'anthropic-version' => '2023-06-01',
-                'content-type'      => 'application/json',
+                'content-type' => 'application/json',
             ])->timeout(self::API_TIMEOUT)
                 ->post('https://api.anthropic.com/v1/messages', [
-                    'model'      => $model,
+                    'model' => $model,
                     'max_tokens' => 512,
-                    'messages'   => [['role' => 'user', 'content' => $prompt]],
+                    'messages' => [['role' => 'user', 'content' => $prompt]],
                 ]);
 
             if (! $response->successful()) {
                 return [];
             }
 
-            $text    = $response->json('content.0.text', '');
-            $text    = preg_replace('/```(?:json)?\s*([\s\S]*?)```/s', '$1', $text);
+            $text = $response->json('content.0.text', '');
+            $text = preg_replace('/```(?:json)?\s*([\s\S]*?)```/s', '$1', $text);
             $decoded = json_decode(trim($text), true);
-            $urls    = $decoded['urls'] ?? [];
+            $urls = $decoded['urls'] ?? [];
 
             if (! is_array($urls)) {
                 return [];
             }
 
             $parsed = parse_url($baseUrl);
-            $valid  = array_filter($urls, function (string $u) use ($parsed): bool {
+            $valid = array_filter($urls, function (string $u) use ($parsed): bool {
                 $p = parse_url($u);
 
                 return ($p['host'] ?? '') === ($parsed['host'] ?? '');
@@ -379,6 +380,27 @@ class WebCrawlerService
         }
 
         return false;
+    }
+
+    /**
+     * True when a URL is not in the exclusion list — used for nav links which are already curated.
+     */
+    private function isNotExcludedUrl(string $url): bool
+    {
+        $path = strtolower(parse_url($url, PHP_URL_PATH) ?? '');
+
+        // Skip file extensions (images, scripts, feeds)
+        if (preg_match('/\.(jpg|jpeg|png|gif|svg|ico|css|js|xml|rss|txt|zip)(\?.*)?$/i', $path)) {
+            return false;
+        }
+
+        foreach (self::EXCLUDE_PATH_KEYWORDS as $kw) {
+            if (str_contains($path, $kw)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     // ── Phase 2 helpers: PDF link discovery ───────────────────────────────
@@ -462,12 +484,13 @@ class WebCrawlerService
 
             if ($accessibility === 'viewer') {
                 Log::info('WebCrawlerService: PDF viewer skipped (not directly downloadable)', ['url' => $url]);
+
                 continue;
             }
 
             $tmpPath = null;
             try {
-                $tmpPath  = $this->downloadPdf($url);
+                $tmpPath = $this->downloadPdf($url);
                 if ($tmpPath === null) {
                     continue;
                 }
@@ -480,7 +503,7 @@ class WebCrawlerService
                 }
             } catch (\Throwable $e) {
                 Log::warning('WebCrawlerService: PDF extraction failed', [
-                    'url'   => $url,
+                    'url' => $url,
                     'error' => $e->getMessage(),
                 ]);
             } finally {
@@ -527,22 +550,22 @@ class WebCrawlerService
     private function normalizePdfItem(array $p, string $pdfUrl): array
     {
         return [
-            'name'        => trim((string) ($p['name'] ?? '')),
-            'type'        => 'product',
-            'source'      => 'pdf',
-            'sku'         => $this->str($p['sku'] ?? null),
-            'brand'       => $this->str($p['brand'] ?? null),
-            'collection'  => $this->str($p['collection'] ?? null),
+            'name' => trim((string) ($p['name'] ?? '')),
+            'type' => 'product',
+            'source' => 'pdf',
+            'sku' => $this->str($p['sku'] ?? null),
+            'brand' => $this->str($p['brand'] ?? null),
+            'collection' => $this->str($p['collection'] ?? null),
             'description' => $this->str($p['description'] ?? null),
-            'materials'   => is_array($p['materials'] ?? null) ? $p['materials'] : null,
-            'finishes'    => is_array($p['finishes'] ?? null) ? array_values($p['finishes']) : null,
-            'colors'      => is_array($p['colors'] ?? null) ? array_values($p['colors']) : null,
-            'dimensions'  => is_array($p['dimensions'] ?? null) ? $p['dimensions'] : null,
-            'price_list'  => $this->numericOrNull($p['price_list'] ?? null),
-            'url'         => $pdfUrl,
-            'source_url'  => $pdfUrl,
-            'h2s'         => [],
-            'imported'    => false,
+            'materials' => is_array($p['materials'] ?? null) ? $p['materials'] : null,
+            'finishes' => is_array($p['finishes'] ?? null) ? array_values($p['finishes']) : null,
+            'colors' => is_array($p['colors'] ?? null) ? array_values($p['colors']) : null,
+            'dimensions' => is_array($p['dimensions'] ?? null) ? $p['dimensions'] : null,
+            'price_list' => $this->numericOrNull($p['price_list'] ?? null),
+            'url' => $pdfUrl,
+            'source_url' => $pdfUrl,
+            'h2s' => [],
+            'imported' => false,
         ];
     }
 
@@ -552,7 +575,7 @@ class WebCrawlerService
     {
         $response = Http::withHeaders([
             'User-Agent' => 'Mozilla/5.0 (compatible; Studio3GHD/1.0; product-catalog-bot)',
-            'Accept'     => 'text/html,application/xhtml+xml',
+            'Accept' => 'text/html,application/xhtml+xml',
         ])
             ->withoutVerifying()
             ->timeout(self::FETCH_TIMEOUT)
@@ -562,7 +585,7 @@ class WebCrawlerService
             throw new \RuntimeException("HTTP {$response->status()} per $url");
         }
 
-        $body    = $response->body();
+        $body = $response->body();
         $charset = 'UTF-8';
 
         if (preg_match('/charset=([^\s;]+)/i', $response->header('Content-Type') ?? '', $m)) {
@@ -617,12 +640,12 @@ class WebCrawlerService
 
     private function extractWithOllama(string $content, string $sourceUrl): array
     {
-        $url   = config('services.ollama.url', 'http://studio_ollama:11434');
+        $url = config('services.ollama.url', 'http://studio_ollama:11434');
         $model = config('services.ollama.model', 'qwen2.5:3b');
 
         $response = Http::timeout(self::API_TIMEOUT)
             ->post("{$url}/api/generate", [
-                'model'  => $model,
+                'model' => $model,
                 'prompt' => $this->buildPrompt($content, $sourceUrl),
                 'stream' => false,
                 'format' => 'json',
@@ -631,7 +654,7 @@ class WebCrawlerService
         if (! $response->successful()) {
             Log::error('WebCrawlerService: Ollama error', [
                 'status' => $response->status(),
-                'body'   => $response->body(),
+                'body' => $response->body(),
             ]);
             throw new \RuntimeException('Errore Ollama API: HTTP '.$response->status());
         }
@@ -644,17 +667,17 @@ class WebCrawlerService
     private function extractWithAnthropic(string $content, string $sourceUrl): array
     {
         $apiKey = config('services.anthropic.api_key');
-        $model  = config('services.anthropic.model', 'claude-haiku-4-5-20251001');
+        $model = config('services.anthropic.model', 'claude-haiku-4-5-20251001');
 
         $response = Http::withHeaders([
-            'x-api-key'         => $apiKey,
+            'x-api-key' => $apiKey,
             'anthropic-version' => '2023-06-01',
-            'content-type'      => 'application/json',
+            'content-type' => 'application/json',
         ])->timeout(self::API_TIMEOUT)
             ->post('https://api.anthropic.com/v1/messages', [
-                'model'      => $model,
+                'model' => $model,
                 'max_tokens' => 4096,
-                'messages'   => [
+                'messages' => [
                     ['role' => 'user', 'content' => $this->buildPrompt($content, $sourceUrl)],
                 ],
             ]);
@@ -662,7 +685,7 @@ class WebCrawlerService
         if (! $response->successful()) {
             Log::error('WebCrawlerService: Anthropic error', [
                 'status' => $response->status(),
-                'body'   => $response->body(),
+                'body' => $response->body(),
             ]);
             throw new \RuntimeException('Errore Anthropic API: HTTP '.$response->status());
         }
@@ -677,8 +700,8 @@ class WebCrawlerService
         return "Sei un assistente specializzato nell'estrazione di cataloghi di prodotti da siti web "
             ."di fornitori italiani di arredamento (cucine, soggiorni, camere, bagni, ufficio, contract).\n\n"
             ."## COMPITO\n\n"
-            ."Analizza il testo di una pagina web di un fornitore e restituisci TUTTI i prodotti "
-            ."e le collezioni trovati. Anche un solo nome senza descrizione è utile — serve per "
+            .'Analizza il testo di una pagina web di un fornitore e restituisci TUTTI i prodotti '
+            .'e le collezioni trovati. Anche un solo nome senza descrizione è utile — serve per '
             ."costruire una bozza del catalogo. Non scartare mai un elemento per dati incompleti.\n\n"
             ."---\n\n"
             ."## ESEMPI REALI DA SITI DEI NOSTRI FORNITORI\n\n"
@@ -764,11 +787,11 @@ class WebCrawlerService
             ."    \"h2s\":[\"Bali Open\",\"Bali Island\",\"Bali Linear\"]}]\n\n"
             ."---\n\n"
             ."## COSA NON ESTRARRE\n\n"
-            ."- Macro-categorie merceologiche quando appaiono SOLO nel menu senza link dedicato: "
+            .'- Macro-categorie merceologiche quando appaiono SOLO nel menu senza link dedicato: '
             ."Cucine, Soggiorni, Camere, Camerette, Cabine Armadio, Bagni, Complementi, Divani\n"
             ."  ECCEZIONE: se la stessa parola appare seguita da 'Scopri di più' → estrarre come product\n"
             ."- Nomi di designer/persone (Marco Piva, Stefano Boeri, ecc.)\n"
-            ."- Testi di navigazione generici: Novità, Promozioni, Contattaci, Virtual Tour, "
+            .'- Testi di navigazione generici: Novità, Promozioni, Contattaci, Virtual Tour, '
             ."Download, Area Riservata, Rete vendita, Blog\n"
             ."- Testi marketing: 'qualità certificata', 'made in Italy', 'design italiano'\n"
             ."- Nomi di fiere/eventi: 'Milan Design Week', 'Salone del Mobile'\n\n"
@@ -825,22 +848,22 @@ class WebCrawlerService
         $url = $this->str($p['source_url'] ?? $p['url'] ?? null) ?? $fallbackUrl;
 
         return [
-            'name'        => trim((string) ($p['name'] ?? '')),
-            'type'        => in_array($p['type'] ?? '', ['collection', 'product']) ? $p['type'] : 'product',
-            'source'      => 'html',
-            'url'         => $url,
-            'source_url'  => $url,
-            'h2s'         => is_array($p['h2s'] ?? null) ? $p['h2s'] : [],
-            'imported'    => false,
-            'sku'         => null,
-            'brand'       => $this->str($p['brand'] ?? null),
-            'collection'  => $this->str($p['collection'] ?? null),
+            'name' => trim((string) ($p['name'] ?? '')),
+            'type' => in_array($p['type'] ?? '', ['collection', 'product']) ? $p['type'] : 'product',
+            'source' => 'html',
+            'url' => $url,
+            'source_url' => $url,
+            'h2s' => is_array($p['h2s'] ?? null) ? $p['h2s'] : [],
+            'imported' => false,
+            'sku' => null,
+            'brand' => $this->str($p['brand'] ?? null),
+            'collection' => $this->str($p['collection'] ?? null),
             'description' => $this->str($p['description'] ?? null),
-            'materials'   => is_array($p['materials'] ?? null) ? $p['materials'] : null,
-            'finishes'    => is_array($p['finishes'] ?? null) ? array_values($p['finishes']) : null,
-            'colors'      => is_array($p['colors'] ?? null) ? array_values($p['colors']) : null,
-            'dimensions'  => null,
-            'price_list'  => null,
+            'materials' => is_array($p['materials'] ?? null) ? $p['materials'] : null,
+            'finishes' => is_array($p['finishes'] ?? null) ? array_values($p['finishes']) : null,
+            'colors' => is_array($p['colors'] ?? null) ? array_values($p['colors']) : null,
+            'dimensions' => null,
+            'price_list' => null,
         ];
     }
 
