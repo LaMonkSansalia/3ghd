@@ -5,7 +5,6 @@ namespace App\Filament\Resources\Products\Schemas;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Supplier;
-use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
@@ -71,6 +70,31 @@ class ProductForm
                             ->maxSize(5120)
                             ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
                             ->helperText('Prima immagine = thumbnail. Max 5 MB per file. JPG, PNG, WebP.'),
+
+                        Placeholder::make('gallery_preview')
+                            ->label('Anteprima (clicca per ingrandire)')
+                            ->content(function ($record): \Illuminate\Support\HtmlString {
+                                if (! $record) {
+                                    return new \Illuminate\Support\HtmlString('<em style="color:#9ca3af;font-size:0.875rem">Le anteprime saranno visibili dopo il salvataggio.</em>');
+                                }
+                                $images = $record->getMedia('images');
+                                if ($images->isEmpty()) {
+                                    return new \Illuminate\Support\HtmlString('<em style="color:#9ca3af;font-size:0.875rem">Nessuna immagine caricata.</em>');
+                                }
+                                $html = '<div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.25rem;">';
+                                foreach ($images as $media) {
+                                    $thumb = $media->getUrl('thumb');
+                                    $full  = $media->getUrl();
+                                    $html .= '<a href="' . e($full) . '" class="glightbox" data-gallery="product-' . $record->id . '" data-title="' . e($media->name) . '">'
+                                           . '<img src="' . e($thumb) . '" style="width:80px;height:60px;object-fit:cover;border-radius:0.375rem;border:1px solid #e5e7eb;cursor:zoom-in;" />'
+                                           . '</a>';
+                                }
+                                $html .= '</div>';
+                                $html .= '<script>document.addEventListener("DOMContentLoaded",function(){if(window.GLightbox)window.GLightbox({selector:".glightbox"});});</script>';
+
+                                return new \Illuminate\Support\HtmlString($html);
+                            })
+                            ->visible(fn ($record) => $record !== null),
                     ]),
 
                 // ── Sidebar (col 3) ───────────────────────────────────────
@@ -85,6 +109,7 @@ class ProductForm
                                     ->searchable()
                                     ->preload()
                                     ->required()
+                                    ->live()
                                     ->createOptionForm([
                                         TextInput::make('name')
                                             ->label('Nome fornitore')
@@ -137,10 +162,11 @@ class ProductForm
                                     ->numeric()
                                     ->prefix('€')
                                     ->minValue(0)
+                                    ->live(debounce: 600)
                                     ->helperText('Visibile solo allo staff.'),
 
                                 TextInput::make('price_list')
-                                    ->label('Prezzo listino (€)')
+                                    ->label('Prezzo vendita (€)')
                                     ->numeric()
                                     ->prefix('€')
                                     ->minValue(0),
@@ -149,14 +175,27 @@ class ProductForm
                                     ->label('Markup override')
                                     ->numeric()
                                     ->placeholder('Es. 1.35 (+35%)')
+                                    ->live(debounce: 600)
                                     ->helperText('Vuoto = usa markup del fornitore'),
 
                                 Placeholder::make('prezzo_cliente')
                                     ->label('Prezzo cliente (€)')
-                                    ->content(fn ($record): string => ($record && $record->cost)
-                                        ? '€ ' . number_format((float) $record->cost * $record->effectiveMarkup(), 2, ',', '.')
-                                        : '—'
-                                    ),
+                                    ->content(function (Get $get): string {
+                                        $cost   = (float) ($get('cost') ?? 0);
+                                        $markup = (float) ($get('markup_override') ?? 0);
+
+                                        if (! $markup) {
+                                            $supplierId = $get('supplier_id');
+                                            $supplier   = $supplierId ? \App\Models\Supplier::find($supplierId) : null;
+                                            $markup     = (float) ($supplier?->markup_default ?? 1.35);
+                                        }
+
+                                        if (! $cost) {
+                                            return '—';
+                                        }
+
+                                        return '€ ' . number_format($cost * $markup, 2, ',', '.');
+                                    }),
                             ]),
 
                         Section::make('Stato')
@@ -172,12 +211,57 @@ class ProductForm
                     ->columnSpanFull()
                     ->collapsed()
                     ->schema([
-                        KeyValue::make('materials')
+                        Repeater::make('materials')
                             ->label('')
-                            ->keyLabel('Attributo (es. Rivestimento, Colore, Gambe, Struttura, Materiale top)')
-                            ->valueLabel('Valore/i')
+                            ->schema([
+                                Select::make('key')
+                                    ->label('Attributo')
+                                    ->options([
+                                        'Rivestimento'  => 'Rivestimento',
+                                        'Colore'        => 'Colore',
+                                        'Gambe'         => 'Gambe',
+                                        'Struttura'     => 'Struttura',
+                                        'Materiale top' => 'Materiale top',
+                                        'Profilo'       => 'Profilo',
+                                        'Imbottitura'   => 'Imbottitura',
+                                        'Seduta'        => 'Seduta',
+                                        'Finitura'      => 'Finitura',
+                                        'Altro'         => '+ Altro (personalizzato)',
+                                    ])
+                                    ->native(false)
+                                    ->searchable()
+                                    ->required(),
+
+                                TextInput::make('value')
+                                    ->label('Valore/i')
+                                    ->placeholder('es. Tessuto cat. M1, Pelle Buff, Rovere naturale')
+                                    ->required(),
+                            ])
+                            ->columns(2)
                             ->addButtonLabel('+ Aggiungi attributo')
-                            ->columnSpanFull(),
+                            ->reorderable()
+                            ->collapsible()
+                            ->columnSpanFull()
+                            ->afterStateHydrated(function (Repeater $component, mixed $state): void {
+                                // Converti vecchio formato {key: value} in [{key, value}]
+                                if (! is_array($state) || empty($state)) {
+                                    return;
+                                }
+                                // Se già nel nuovo formato (array di oggetti con 'key'), non fare nulla
+                                if (isset($state[0]) && is_array($state[0]) && array_key_exists('key', $state[0])) {
+                                    return;
+                                }
+                                // Vecchio formato: array associativo
+                                $converted = [];
+                                foreach ($state as $k => $v) {
+                                    if (is_string($k)) {
+                                        $converted[] = ['key' => $k, 'value' => (string) $v];
+                                    }
+                                }
+                                if (! empty($converted)) {
+                                    $component->state($converted);
+                                }
+                            }),
                     ]),
 
                 Section::make('Dimensioni')

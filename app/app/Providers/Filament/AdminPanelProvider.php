@@ -13,7 +13,6 @@ use Filament\Support\Colors\Color;
 use Filament\Support\Facades\FilamentView;
 use Filament\View\PanelsRenderHook;
 use Filament\Widgets\AccountWidget;
-use Filament\Widgets\FilamentInfoWidget;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
@@ -32,7 +31,9 @@ class AdminPanelProvider extends PanelProvider
             PanelsRenderHook::BODY_END,
             fn (): string => Blade::render('
                 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/driver.js@1/dist/driver.css"/>
+                <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/glightbox/dist/css/glightbox.min.css"/>
                 <script src="https://cdn.jsdelivr.net/npm/driver.js@1/dist/driver.js.iife.js"></script>
+                <script src="https://cdn.jsdelivr.net/npm/glightbox/dist/js/glightbox.min.js"></script>
                 @if(auth()->check())
                     <script>window.studio3ghdTourPending = {{ auth()->user()->tour_completed ? "false" : "true" }};</script>
                 @endif
@@ -48,6 +49,10 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
+            ->brandName('Studio')
+            ->brandLogo(asset('images/logo-3ghd.png'))
+            ->brandLogoHeight('2rem')
+            ->sidebarCollapsibleOnDesktop()
             ->colors([
                 'primary' => Color::hex('#0D9488'), // 3GHD teal
             ])
@@ -59,7 +64,6 @@ class AdminPanelProvider extends PanelProvider
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->widgets([
                 AccountWidget::class,
-                FilamentInfoWidget::class,
             ])
             ->middleware([
                 EncryptCookies::class,

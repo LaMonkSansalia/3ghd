@@ -44,15 +44,15 @@ class ProductsTable
                     ->searchable()
                     ->sortable()
                     ->badge()
-                    ->color('gray')
+                    ->color(fn ($record) => $record->supplier?->badgeColor() ?? 'gray')
                     ->toggleable(),
 
                 TextColumn::make('price_list')
-                    ->label('Listino')
+                    ->label('Prezzo vendita')
                     ->money('EUR')
                     ->sortable()
                     ->placeholder('—')
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 TextColumn::make('tipo_prodotto')
                     ->label('Tipo')

@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Suppliers\Schemas;
 
 use Filament\Schemas\Components\Section;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -38,6 +39,30 @@ class SupplierForm
                             ->label('Fornitore attivo')
                             ->default(true)
                             ->columnSpanFull(),
+
+                        Select::make('color')
+                            ->label('Colore badge')
+                            ->options([
+                                'blue'   => 'Blu',
+                                'teal'   => 'Teal',
+                                'green'  => 'Verde',
+                                'emerald'=> 'Smeraldo',
+                                'cyan'   => 'Ciano',
+                                'indigo' => 'Indaco',
+                                'violet' => 'Viola',
+                                'purple' => 'Porpora',
+                                'pink'   => 'Rosa',
+                                'rose'   => 'Rosso rosa',
+                                'orange' => 'Arancione',
+                                'amber'  => 'Ambra',
+                                'yellow' => 'Giallo',
+                                'lime'   => 'Lime',
+                                'gray'   => 'Grigio',
+                            ])
+                            ->native(false)
+                            ->placeholder('Auto (basato su ID)')
+                            ->helperText('Lascia vuoto per assegnazione automatica.')
+                            ->nullable(),
                     ]),
 
                 Section::make('Contatto')

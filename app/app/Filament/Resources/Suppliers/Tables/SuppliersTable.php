@@ -18,7 +18,9 @@ class SuppliersTable
                 TextColumn::make('name')
                     ->label('Fornitore')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->badge()
+                    ->color(fn ($record) => $record->badgeColor()),
 
                 TextColumn::make('website')
                     ->label('Sito')
@@ -36,12 +38,6 @@ class SuppliersTable
                 TextColumn::make('markup_default')
                     ->label('Markup')
                     ->formatStateUsing(fn ($state) => '+' . round(($state - 1) * 100) . '%')
-                    ->sortable(),
-
-                TextColumn::make('last_imported_at')
-                    ->label('Ultimo import')
-                    ->since()
-                    ->placeholder('Mai')
                     ->sortable(),
 
                 ToggleColumn::make('is_active')
