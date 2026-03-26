@@ -255,7 +255,7 @@ class ProductForm
                                 $converted = [];
                                 foreach ($state as $k => $v) {
                                     if (is_string($k)) {
-                                        $converted[] = ['key' => $k, 'value' => (string) $v];
+                                        $converted[] = ['key' => $k, 'value' => is_array($v) ? implode(', ', $v) : (string) $v];
                                     }
                                 }
                                 if (! empty($converted)) {
