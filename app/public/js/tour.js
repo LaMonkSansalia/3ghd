@@ -164,7 +164,7 @@
         }).catch(() => {});
     }
 
-    function showExitConfirmation(phaseIndex) {
+    function showExitConfirmation(phaseIndex, stepIndex) {
         const existing = document.getElementById('tour-exit-overlay');
         if (existing) existing.remove();
 
@@ -189,11 +189,11 @@
 
         document.getElementById('tour-exit-resume').addEventListener('click', function () {
             overlay.remove();
-            startPhase(phaseIndex);
+            startPhase(phaseIndex, stepIndex);
         });
     }
 
-    function startPhase(index) {
+    function startPhase(index, resumeAtStep) {
         const phase = phases[index];
         if (! phase) {
             completeTour();
@@ -228,6 +228,7 @@
         // Intercetta il completamento naturale (click su "Prossima sezione →" o "✓ Fatto!")
         // sull'ultimo step. Se invece l'utente clicca X, onDestroyed mostra la conferma.
         let completedNaturally = false;
+        let activeStepIndex = resumeAtStep || 0;
         const lastIdx = steps.length - 1;
         steps[lastIdx] = Object.assign({}, steps[lastIdx], {
             onNextClick: function () {
@@ -243,6 +244,9 @@
             nextBtnText: 'Avanti \u2192',
             prevBtnText: '\u2190 Indietro',
             doneBtnText: isLastPhase ? '\u2713 Fatto!' : 'Prossima sezione \u2192',
+            onDestroyStarted: function () {
+                activeStepIndex = driverObj.getActiveIndex() || 0;
+            },
             onDestroyed: function () {
                 if (completedNaturally) {
                     const next = index + 1;
@@ -253,12 +257,12 @@
                         completeTour();
                     }
                 } else {
-                    showExitConfirmation(index);
+                    showExitConfirmation(index, activeStepIndex);
                 }
             },
         });
 
-        driverObj.drive();
+        driverObj.drive(resumeAtStep || 0);
     }
 
     // Esporta per il pulsante "Riavvia tour" nella pagina Guida
