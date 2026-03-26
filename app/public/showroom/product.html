@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Prodotto — 3G Home Design</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #E2EDEF;
+      color: #1a4b4e;
+      min-height: 100vh;
+    }
+
+    .topbar {
+      background: #299095;
+      color: white;
+      padding: 8px 24px;
+      font-size: 13px;
+    }
+    .topbar-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .topbar a { color: white; text-decoration: none; }
+    .topbar a:hover { text-decoration: underline; }
+
+    header {
+      background: white;
+      padding: 16px 24px;
+      border-bottom: 1px solid #d4e4e7;
+    }
+    .header-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo {
+      font-size: 20px;
+      font-weight: 700;
+      color: #1a4b4e;
+      text-decoration: none;
+      letter-spacing: -0.3px;
+    }
+    .logo span { color: #638e92; }
+    header nav a {
+      color: #638e92;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    main {
+      max-width: 1200px;
+      margin: 32px auto;
+      padding: 0 24px;
+    }
+
+    /* Breadcrumb */
+    .breadcrumb {
+      font-size: 13px;
+      color: #638e92;
+      margin-bottom: 24px;
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .breadcrumb a { color: #638e92; text-decoration: none; }
+    .breadcrumb a:hover { text-decoration: underline; }
+    .breadcrumb-sep { color: #b8cdd0; }
+
+    /* Spinner */
+    .spinner {
+      text-align: center;
+      padding: 80px 0;
+    }
+    .spinner-ring {
+      width: 36px;
+      height: 36px;
+      border: 3px solid #d4e4e7;
+      border-top-color: #299095;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      display: inline-block;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Error state */
+    .error-state {
+      display: none;
+      background: white;
+      border-radius: 12px;
+      padding: 48px;
+      text-align: center;
+    }
+    .error-state p { color: #638e92; margin-bottom: 20px; }
+    .btn-back {
+      display: inline-flex;
+      align-items: center;
+      padding: 0 28px;
+      min-height: 50px;
+      border-radius: 100px;
+      background: #299095;
+      color: white;
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 600;
+      transition: background 0.12s;
+    }
+    .btn-back:hover { background: #1a4b4e; }
+
+    /* 2-col layout */
+    .product-layout {
+      display: none;
+      gap: 40px;
+      align-items: flex-start;
+    }
+    @media (min-width: 690px) {
+      .product-layout { display: grid; grid-template-columns: 1fr 1fr; }
+    }
+    .product-layout-mobile {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+    @media (min-width: 690px) { .product-layout-mobile { display: none !important; } }
+
+    /* Image column */
+    .img-main {
+      aspect-ratio: 4/3;
+      background: linear-gradient(135deg, #299095 0%, #1a4b4e 100%);
+      border-radius: 12px;
+      overflow: hidden;
+      cursor: pointer;
+      position: relative;
+    }
+    .img-main img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: opacity 0.15s;
+    }
+    .img-main:hover img { opacity: 0.9; }
+
+    .img-thumbs {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+    .img-thumb {
+      width: 64px;
+      height: 48px;
+      border-radius: 6px;
+      overflow: hidden;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: border-color 0.12s;
+    }
+    .img-thumb.active { border-color: #299095; }
+    .img-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+    /* Details column */
+    .product-code-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: #638e92;
+      margin-bottom: 6px;
+    }
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 1.2;
+      color: #1a4b4e;
+      margin-bottom: 6px;
+    }
+    .product-meta {
+      font-size: 14px;
+      color: #638e92;
+      margin-bottom: 20px;
+    }
+    .price-display {
+      font-size: 28px;
+      font-weight: 700;
+      color: #1a4b4e;
+      margin-bottom: 16px;
+    }
+    .btn-contact {
+      display: inline-flex;
+      align-items: center;
+      padding: 0 28px;
+      min-height: 50px;
+      border-radius: 100px;
+      background: #299095;
+      color: white;
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      transition: background 0.12s;
+    }
+    .btn-contact:hover { background: #1a4b4e; }
+
+    hr { border: none; border-top: 1px solid #d4e4e7; margin: 20px 0; }
+
+    .section-title {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      color: #638e92;
+      margin-bottom: 8px;
+    }
+    .description {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #1a4b4e;
+      white-space: pre-line;
+    }
+
+    /* Materials DL */
+    dl.materials { display: grid; grid-template-columns: auto 1fr; gap: 4px 16px; font-size: 14px; }
+    dt.mat-key { font-weight: 600; color: #1a4b4e; }
+    dd.mat-val { color: #4a7a7e; }
+
+    /* Dimensions table */
+    .dim-table { width: 100%; font-size: 13px; border-collapse: collapse; }
+    .dim-table th { text-align: left; padding: 4px 8px; background: #E2EDEF; color: #638e92; font-weight: 600; border-radius: 4px; }
+    .dim-table td { padding: 4px 8px; color: #1a4b4e; }
+    .dim-label { font-size: 12px; color: #638e92; margin-bottom: 4px; }
+    .dim-block { margin-bottom: 12px; }
+
+    /* Colors & Finishes */
+    .tag-list { display: flex; flex-wrap: wrap; gap: 6px; }
+    .tag {
+      font-size: 13px;
+      padding: 4px 12px;
+      border-radius: 100px;
+      background: #E2EDEF;
+      color: #1a4b4e;
+    }
+
+    /* Lightbox dialog */
+    dialog {
+      padding: 0;
+      border: none;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #1a4b4e;
+      max-width: 90vw;
+      max-height: 90vh;
+    }
+    dialog::backdrop { background: rgba(0,0,0,0.7); }
+    dialog img { display: block; max-width: 90vw; max-height: 88vh; object-fit: contain; }
+    .dialog-close {
+      position: absolute;
+      top: 8px;
+      right: 12px;
+      background: none;
+      border: none;
+      color: white;
+      font-size: 22px;
+      cursor: pointer;
+      line-height: 1;
+      padding: 4px;
+    }
+    dialog > div { position: relative; }
+
+    /* Footer */
+    footer {
+      background: #EEF4F5;
+      border-top: 1px solid #d4e4e7;
+      padding: 28px 24px;
+      margin-top: 48px;
+      text-align: center;
+      font-size: 13px;
+      color: #638e92;
+    }
+    footer strong { color: #1a4b4e; }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <span>Lun – Sab &nbsp;9:00–13:00 / 15:30–19:30</span>
+    <a href="mailto:tregihomedesign@gmail.com">tregihomedesign@gmail.com</a>
+  </div>
+</div>
+
+<header>
+  <div class="header-inner">
+    <a href="https://www.3ghomedesign.it" class="logo">3G <span>Home Design</span></a>
+    <nav><a href="https://www.3ghomedesign.it/contatti/">Contatti</a></nav>
+  </div>
+</header>
+
+<main>
+  <div class="breadcrumb" id="breadcrumb">
+    <a href="index.html">Catalogo</a>
+    <span class="breadcrumb-sep">›</span>
+    <span id="bc-category">—</span>
+    <span class="breadcrumb-sep">›</span>
+    <span id="bc-name">—</span>
+  </div>
+
+  <div class="spinner" id="loading"><div class="spinner-ring"></div></div>
+
+  <div class="error-state" id="error">
+    <p id="error-msg">Prodotto non trovato.</p>
+    <a href="index.html" class="btn-back">← Torna al catalogo</a>
+  </div>
+
+  <!-- Desktop 2-col -->
+  <div class="product-layout" id="product">
+    <!-- Colonna sx: immagine -->
+    <div>
+      <div class="img-main" id="img-main" onclick="openLightbox()">
+        <img id="img-main-src" src="" alt="">
+      </div>
+      <div class="img-thumbs" id="img-thumbs"></div>
+    </div>
+
+    <!-- Colonna dx: dettagli -->
+    <div id="details"></div>
+  </div>
+
+  <!-- Mobile stacked -->
+  <div class="product-layout-mobile" id="product-mobile" style="display:none;">
+    <div>
+      <div class="img-main" id="img-main-m" onclick="openLightbox()">
+        <img id="img-main-src-m" src="" alt="">
+      </div>
+      <div class="img-thumbs" id="img-thumbs-m"></div>
+    </div>
+    <div id="details-m"></div>
+  </div>
+</main>
+
+<footer>
+  <strong>3G Home Design</strong> · Via Roma, Roccapalumba (PA)
+</footer>
+
+<!-- Lightbox -->
+<dialog id="lightbox">
+  <div>
+    <button class="dialog-close" onclick="document.getElementById('lightbox').close()">✕</button>
+    <img id="lightbox-img" src="" alt="">
+  </div>
+</dialog>
+
+<script>
+  // Guard: redirect se code non presente
+  const params = new URLSearchParams(location.search);
+  const code = params.get('code');
+  if (!code) { location.href = 'index.html'; }
+
+  const BASE = '/api/showroom';
+  let currentImages = [];
+  let currentImgIdx = 0;
+
+  function esc(str) {
+    if (str == null) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function fmtPrice(price) {
+    if (price == null) return null;
+    return '€\u00a0' + Number(price).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function buildDetails(p) {
+    const meta = [p.brand, p.supplier ? ('Fornitore: ' + p.supplier) : null].filter(Boolean).map(esc).join(' · ');
+
+    const priceHtml = p.price != null
+      ? `<div class="price-display">${fmtPrice(p.price)}</div>`
+      : `<a class="btn-contact" href="mailto:tregihomedesign@gmail.com?subject=${encodeURIComponent('Informazioni prodotto ' + (p.product_code || ''))}">Richiedi informazioni</a>`;
+
+    let materialsHtml = '';
+    if (Array.isArray(p.materials) && p.materials.length) {
+      const rows = p.materials.map(m => {
+        const key = typeof m === 'object' ? m.key : Object.keys(m)[0];
+        const val = typeof m === 'object' ? m.value : Object.values(m)[0];
+        return `<dt class="mat-key">${esc(key)}</dt><dd class="mat-val">${esc(val)}</dd>`;
+      }).join('');
+      materialsHtml = `<hr><div class="section-title">Materiali</div><dl class="materials">${rows}</dl>`;
+    }
+
+    let dimensionsHtml = '';
+    if (Array.isArray(p.dimensions) && p.dimensions.length) {
+      const blocks = p.dimensions.map(d => {
+        const label = d.label ? `<div class="dim-label">${esc(d.label)}</div>` : '';
+        let cells = '';
+        if (d.tipo === 'rotondo') {
+          cells = `<tr><th>Ø</th><th>H</th></tr><tr><td>${esc(String(d.diametro ?? '—'))}</td><td>${esc(String(d.h ?? '—'))}</td></tr>`;
+        } else {
+          cells = `<tr><th>L</th><th>P</th><th>H</th></tr><tr><td>${esc(String(d.l ?? '—'))}</td><td>${esc(String(d.p ?? '—'))}</td><td>${esc(String(d.h ?? '—'))}</td></tr>`;
+        }
+        return `<div class="dim-block">${label}<table class="dim-table">${cells}</table></div>`;
+      }).join('');
+      dimensionsHtml = `<hr><div class="section-title">Dimensioni (cm)</div>${blocks}`;
+    }
+
+    let colorsHtml = '';
+    if (Array.isArray(p.colors) && p.colors.length) {
+      const tags = p.colors.map(c => `<span class="tag">${esc(c)}</span>`).join('');
+      colorsHtml = `<hr><div class="section-title">Colori</div><div class="tag-list">${tags}</div>`;
+    }
+
+    let finishesHtml = '';
+    if (Array.isArray(p.finishes) && p.finishes.length) {
+      const tags = p.finishes.map(f => `<span class="tag">${esc(f)}</span>`).join('');
+      finishesHtml = `<hr><div class="section-title">Finiture</div><div class="tag-list">${tags}</div>`;
+    }
+
+    const descHtml = p.description
+      ? `<hr><div class="section-title">Descrizione</div><p class="description">${esc(p.description)}</p>`
+      : '';
+
+    return `
+      <div class="product-code-label">${esc(p.product_code)}</div>
+      <h1>${esc(p.name)}</h1>
+      ${meta ? `<div class="product-meta">${meta}</div>` : ''}
+      ${priceHtml}
+      ${materialsHtml}
+      ${dimensionsHtml}
+      ${colorsHtml}
+      ${finishesHtml}
+      ${descHtml}
+    `;
+  }
+
+  function setMainImage(url, idx) {
+    currentImgIdx = idx;
+    document.getElementById('img-main-src').src = url;
+    document.getElementById('img-main-src-m').src = url;
+
+    document.querySelectorAll('.img-thumb').forEach((el, i) => {
+      el.classList.toggle('active', i === idx);
+    });
+  }
+
+  function renderThumbs(images, container) {
+    if (images.length <= 1) return;
+    container.innerHTML = images.map((img, i) => `
+      <div class="img-thumb ${i === 0 ? 'active' : ''}" onclick="setMainImage(${JSON.stringify(img.card)}, ${i})">
+        <img src="${esc(img.thumb)}" alt="">
+      </div>
+    `).join('');
+  }
+
+  function openLightbox() {
+    const url = currentImages[currentImgIdx]?.card;
+    if (!url) return;
+    document.getElementById('lightbox-img').src = url;
+    document.getElementById('lightbox').showModal();
+  }
+
+  async function loadProduct() {
+    const loading = document.getElementById('loading');
+    const errorEl = document.getElementById('error');
+    const productEl = document.getElementById('product');
+
+    loading.style.display = 'block';
+
+    try {
+      const res = await fetch(`${BASE}/products/${encodeURIComponent(code)}`);
+
+      if (res.status === 404) {
+        document.getElementById('error-msg').textContent = 'Prodotto non trovato.';
+        errorEl.style.display = 'block';
+        return;
+      }
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+
+      const p = await res.json();
+
+      // Update page title and breadcrumb
+      document.title = `${esc(p.name)} — 3G Home Design`;
+      document.getElementById('bc-name').textContent = p.name;
+      if (p.category?.name) {
+        const catLink = document.createElement('a');
+        catLink.href = `index.html`;
+        catLink.textContent = p.category.name;
+        document.getElementById('bc-category').replaceChildren(catLink);
+      }
+
+      // Images
+      currentImages = p.images && p.images.length ? p.images : [];
+      const firstCard = currentImages[0]?.card || null;
+
+      if (firstCard) {
+        document.getElementById('img-main-src').src = firstCard;
+        document.getElementById('img-main-src-m').src = firstCard;
+      } else {
+        document.getElementById('img-main-src').style.display = 'none';
+        document.getElementById('img-main-src-m').style.display = 'none';
+      }
+
+      renderThumbs(currentImages, document.getElementById('img-thumbs'));
+      renderThumbs(currentImages, document.getElementById('img-thumbs-m'));
+
+      // Details
+      const detailsHtml = buildDetails(p);
+      document.getElementById('details').innerHTML = detailsHtml;
+      document.getElementById('details-m').innerHTML = detailsHtml;
+
+      // Show layout
+      productEl.style.display = 'grid';
+      document.getElementById('product-mobile').style.display = 'flex';
+
+    } catch (e) {
+      document.getElementById('error-msg').textContent = 'Errore nel caricamento. Riprova più tardi.';
+      errorEl.style.display = 'block';
+    } finally {
+      loading.style.display = 'none';
+    }
+  }
+
+  // Lightbox close on backdrop click
+  document.getElementById('lightbox').addEventListener('click', function (e) {
+    if (e.target === this) this.close();
+  });
+
+  loadProduct();
+</script>
+</body>
+</html>
