@@ -11,7 +11,8 @@
 (function () {
     if (typeof window.driver === 'undefined') return;
 
-    const PHASE_KEY = 'studio3ghd_tour_phase';
+    const PHASE_KEY   = 'studio3ghd_tour_phase';
+    const WELCOME_KEY = 'studio3ghd_tour_welcome';
 
     /**
      * Fasi del tour. Ogni fase:
@@ -179,11 +180,25 @@
 
         sessionStorage.setItem(PHASE_KEY, String(index));
 
+        // Messaggio di benvenuto — solo al primo accesso (WELCOME_KEY impostato dall'avvio automatico)
+        let steps = phase.steps;
+        if (index === 0 && sessionStorage.getItem(WELCOME_KEY) === '1') {
+            sessionStorage.removeItem(WELCOME_KEY);
+            steps = [
+                {
+                    popover: {
+                        title: 'Ciao Peppe Greco',
+                        description: 'Questo è lo strumento che ti supporterà in tutto quello che vuoi. Ho preparato un breve tutorial e riorganizzato le informazioni. Fammi sapere che ne pensi.<br><br><em>— Placito</em>',
+                    },
+                },
+            ].concat(phase.steps);
+        }
+
         const isLastPhase = index === phases.length - 1;
 
         const driverObj = window.driver.js.driver({
             showProgress: false,
-            steps: phase.steps,
+            steps: steps,
             nextBtnText: 'Avanti →',
             prevBtnText: '← Indietro',
             doneBtnText: isLastPhase ? '✓ Fatto!' : 'Prossima sezione →',
@@ -217,6 +232,7 @@
 
         // Avvio automatico al primo accesso
         if (window.studio3ghdTourPending === true) {
+            sessionStorage.setItem(WELCOME_KEY, '1');
             setTimeout(function () { startPhase(0); }, 800);
         }
     });
