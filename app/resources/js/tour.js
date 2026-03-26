@@ -42,15 +42,21 @@
                     },
                 },
                 {
+                    element: '.fi-ta-header-toolbar',
                     popover: {
                         title: 'Filtra e cerca',
-                        description: 'Usa la barra di ricerca per trovare per nome, SKU o fornitore. Il pulsante "Filtri" consente di filtrare per fornitore, categoria e tipo. "Colonne" mostra o nasconde i campi visibili.',
+                        description: 'Usa la barra di ricerca per trovare per nome, SKU o fornitore. "Filtri" filtra per fornitore, categoria e tipo. "Colonne" mostra o nasconde i campi.',
+                        side: 'bottom',
+                        align: 'start',
                     },
                 },
                 {
+                    element: '.fi-ta-row:first-child',
                     popover: {
                         title: 'Modifica un prodotto',
                         description: 'Clicca sull\'icona matita a destra di ogni riga per aprire la scheda prodotto completa con tutti i campi.',
+                        side: 'top',
+                        align: 'center',
                     },
                 },
             ],
@@ -60,9 +66,12 @@
             match: '/admin/products/create',
             steps: [
                 {
+                    element: '.fi-fo-select-wrp',
                     popover: {
                         title: '✏️ Tipo prodotto',
-                        description: 'In alto a sinistra seleziona il <strong>Tipo prodotto</strong> — obbligatorio. Campionato per configurazioni con codice fornitore, A listino per prodotti a prezzo fisso.',
+                        description: 'Seleziona il <strong>Tipo prodotto</strong> — obbligatorio. Campionato per configurazioni con codice fornitore, A listino per prodotti a prezzo fisso.',
+                        side: 'bottom',
+                        align: 'start',
                     },
                 },
                 {
@@ -173,8 +182,7 @@
         const isLastPhase = index === phases.length - 1;
 
         const driverObj = window.driver.js.driver({
-            showProgress: true,
-            progressText: 'Sezione {{current}} di ' + phases.length,
+            showProgress: false,
             steps: phase.steps,
             nextBtnText: 'Avanti →',
             prevBtnText: '← Indietro',

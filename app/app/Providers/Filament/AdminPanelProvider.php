@@ -32,6 +32,11 @@ class AdminPanelProvider extends PanelProvider
             fn (): string => Blade::render('
                 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/driver.js@1/dist/driver.css"/>
                 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/glightbox/dist/css/glightbox.min.css"/>
+                <style>
+                  .driver-popover{min-width:320px;max-width:440px}
+                  .driver-popover-footer{justify-content:flex-end}
+                  .driver-popover-progress-text{display:none}
+                </style>
                 <script src="https://cdn.jsdelivr.net/npm/driver.js@1/dist/driver.js.iife.js"></script>
                 <script src="https://cdn.jsdelivr.net/npm/glightbox/dist/js/glightbox.min.js"></script>
                 @if(auth()->check())
