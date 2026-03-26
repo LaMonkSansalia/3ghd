@@ -1,13 +1,9 @@
 /**
  * Tour guidato Studio3GHD — Driver.js (browser IIFE)
  *
- * ARCHITETTURA: onDestroyed si attiva su OGNI transizione step (moveNext/movePrevious)
- * e sulla chiusura (X, ESC). Per distinguere i due casi:
- *
- * - browserDetectXClick() installa un DOM listener su .driver-popover-close-btn e ESC.
- *   Imposta xClicked=true PRIMA che onDestroyed si attivi.
- * - activeStepIndex è tracciato da onNextClick/onPrevClick su ogni step.
- * - onDestroyed controlla: completedNaturally → naviga | xClicked → overlay | else → nulla
+ * ARCHITETTURA: navigazione diretta in onNextClick sull'ultimo step.
+ * Non dipende da onDestroyed (si attiva su ogni moveNext, non solo al termine).
+ * X / ESC: il tour si chiude e basta — nessun overlay di conferma.
  */
 (function () {
     if (typeof window.driver === 'undefined') return;
@@ -79,52 +75,6 @@
         }).catch(function () {});
     }
 
-    // Rileva click su X e ESC — imposta xClicked=true PRIMA che onDestroyed si attivi.
-    // activeStepIndex è tracciato separatamente da onNextClick/onPrevClick.
-    function browserDetectXClick(callback) {
-        function onClose(e) {
-            if (e.target.closest('.driver-popover-close-btn')) callback();
-        }
-        function onEsc(e) {
-            if (e.key === 'Escape') callback();
-        }
-        document.addEventListener('click', onClose, true);
-        document.addEventListener('keydown', onEsc, true);
-        return function cleanup() {
-            document.removeEventListener('click', onClose, true);
-            document.removeEventListener('keydown', onEsc, true);
-        };
-    }
-
-    function showExitConfirmation(phaseIndex, stepIndex, startPhase) {
-        var existing = document.getElementById('tour-exit-overlay');
-        if (existing) existing.remove();
-
-        var overlay = document.createElement('div');
-        overlay.id = 'tour-exit-overlay';
-        overlay.innerHTML =
-            '<div style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100000;display:flex;align-items:center;justify-content:center;">' +
-                '<div style="background:#fff;border-radius:12px;padding:28px 32px;max-width:420px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.18);font-family:inherit;">' +
-                    '<p style="margin:0 0 8px;font-size:1rem;font-weight:600;color:#111827;">Vuoi togliere il tutorial?</p>' +
-                    '<p style="margin:0 0 24px;font-size:.9rem;color:#6b7280;">Puoi sempre trovarlo nella <a href="/admin/help" style="color:#0d9488;font-weight:500;text-decoration:underline;">pagina Guida \u2192</a></p>' +
-                    '<div style="display:flex;gap:10px;justify-content:flex-end;">' +
-                        '<button id="tour-exit-resume" style="padding:8px 18px;border:1px solid #d1d5db;border-radius:8px;background:#fff;cursor:pointer;font-size:.875rem;color:#374151;">Continua tour</button>' +
-                        '<button id="tour-exit-skip" style="padding:8px 18px;border:none;border-radius:8px;background:#0d9488;color:#fff;cursor:pointer;font-size:.875rem;">S\u00ec, salta</button>' +
-                    '</div>' +
-                '</div>' +
-            '</div>';
-        document.body.appendChild(overlay);
-
-        document.getElementById('tour-exit-skip').addEventListener('click', function () {
-            overlay.remove();
-            completeTour();
-        });
-        document.getElementById('tour-exit-resume').addEventListener('click', function () {
-            overlay.remove();
-            startPhase(phaseIndex, stepIndex);
-        });
-    }
-
     function startPhase(index, resumeAtStep) {
         var phase = phases[index];
         if (!phase) {
@@ -153,55 +103,38 @@
         }
 
         var isLastPhase = index === phases.length - 1;
-        var completedNaturally = false;
-        var xClicked = false;
-        var activeStepIndex = resumeAtStep || 0;
-
-        // Installa listener X/ESC — solo xClicked=true, activeStepIndex già tracciato sotto
-        var cleanupXDetect = browserDetectXClick(function () {
-            xClicked = true;
-        });
+        var driverObj;
 
         var mappedSteps = steps.map(function (step, i) {
             var isLast = i === steps.length - 1;
             return Object.assign({}, step, {
                 onNextClick: function () {
                     if (isLast) {
-                        completedNaturally = true;
+                        // Navigazione diretta nell'handler — non dipende da onDestroyed
+                        var next = index + 1;
+                        if (next < phases.length) {
+                            sessionStorage.setItem(PHASE_KEY, String(next));
+                            window.location.href = phases[next].url;
+                        } else {
+                            completeTour();
+                            driverObj.destroy();
+                        }
                     } else {
-                        activeStepIndex = i + 1;
+                        driverObj.moveNext();
                     }
-                    driverObj.moveNext();
                 },
                 onPrevClick: function () {
-                    activeStepIndex = Math.max(0, i - 1);
                     driverObj.movePrevious();
                 },
             });
         });
 
-        var driverObj;
         driverObj = window.driver.js.driver({
             showProgress: false,
             steps: mappedSteps,
             nextBtnText: 'Avanti \u2192',
             prevBtnText: '\u2190 Indietro',
             doneBtnText: isLastPhase ? '\u2713 Fatto!' : 'Prossima sezione \u2192',
-            onDestroyed: function () {
-                cleanupXDetect();
-                if (completedNaturally) {
-                    var next = index + 1;
-                    if (next < phases.length) {
-                        sessionStorage.setItem(PHASE_KEY, String(next));
-                        window.location.href = phases[next].url;
-                    } else {
-                        completeTour();
-                    }
-                } else if (xClicked) {
-                    showExitConfirmation(index, activeStepIndex, startPhase);
-                }
-                // else: avanzamento normale tra step — non fare nulla
-            },
         });
 
         driverObj.drive(resumeAtStep || 0);

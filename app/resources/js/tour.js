@@ -1,25 +1,21 @@
 /**
  * Tour guidato Studio3GHD — Driver.js
  *
- * ARCHITETTURA (dopo analisi comportamento Driver.js v1):
+ * ARCHITETTURA:
+ * onDestroyed si attiva su OGNI transizione step — non è affidabile per rilevare
+ * il completamento. Soluzione: la navigazione avviene direttamente in onNextClick
+ * sull'ultimo step, senza dipendere da onDestroyed.
  *
- * onDestroyed si attiva SU OGNI avanzamento step (moveNext/movePrevious)
- * E sulla chiusura (X, ESC, click fuori). Non è usabile da solo per
- * distinguere chiusura da avanzamento.
- *
- * Soluzione: detectXClick() — DOM listener sul pulsante .driver-popover-close-btn
- * e su ESC key. Imposta xClicked=true PRIMA che onDestroyed si attivi.
- * onDestroyed controlla: completedNaturally → naviga | xClicked → overlay | else → step change
+ * X / ESC: il tour si chiude e basta — nessun overlay.
  */
 
 /**
  * Logica core esportata per i test (Vitest).
  * @param {object} deps
  *   phases, PHASE_KEY, WELCOME_KEY,
- *   onNavigate(url), onCompleteTour(), onShowOverlay(phaseIdx, stepIdx, startPhase)
- *   detectXClick(callback) → cleanup fn   [iniettabile per i test]
+ *   onNavigate(url), onCompleteTour()
  */
-export function buildTourCore({ phases, PHASE_KEY, WELCOME_KEY, onNavigate, onCompleteTour, onShowOverlay, detectXClick }) {
+export function buildTourCore({ phases, PHASE_KEY, WELCOME_KEY, onNavigate, onCompleteTour }) {
 
     function isOnPhasePage(phase) {
         const path = window.location.pathname;
@@ -64,95 +60,44 @@ export function buildTourCore({ phases, PHASE_KEY, WELCOME_KEY, onNavigate, onCo
         const steps = buildSteps(index);
         const isLastPhase = index === phases.length - 1;
 
-        let completedNaturally = false;
-        let xClicked = false;
-        let activeStepIndex = resumeAtStep || 0;
+        let driverObj;
 
-        // Registra rilevamento X/ESC — iniettabile per i test
-        // activeStepIndex è già tracciato da onNextClick/onPrevClick — qui basta xClicked=true
-        const cleanupXDetect = detectXClick(function () {
-            xClicked = true;
-        });
-
-        // onNextClick/onPrevClick su tutti gli step per tracciare posizione
         const mappedSteps = steps.map(function (step, i) {
             const isLast = i === steps.length - 1;
             return Object.assign({}, step, {
                 onNextClick: function () {
                     if (isLast) {
-                        completedNaturally = true;
+                        // Navigazione diretta — non dipende da onDestroyed
+                        const next = index + 1;
+                        if (next < phases.length) {
+                            sessionStorage.setItem(PHASE_KEY, String(next));
+                            onNavigate(phases[next].url);
+                        } else {
+                            onCompleteTour();
+                            driverObj.destroy();
+                        }
                     } else {
-                        activeStepIndex = i + 1;
+                        driverObj.moveNext();
                     }
-                    driverObj.moveNext();
                 },
                 onPrevClick: function () {
-                    activeStepIndex = Math.max(0, i - 1);
                     driverObj.movePrevious();
                 },
             });
         });
 
-        let driverObj;
         driverObj = window.driver.js.driver({
             showProgress: false,
             steps: mappedSteps,
             nextBtnText: 'Avanti \u2192',
             prevBtnText: '\u2190 Indietro',
             doneBtnText: isLastPhase ? '\u2713 Fatto!' : 'Prossima sezione \u2192',
-            onDestroyed: function () {
-                cleanupXDetect();
-                if (completedNaturally) {
-                    const next = index + 1;
-                    if (next < phases.length) {
-                        sessionStorage.setItem(PHASE_KEY, String(next));
-                        onNavigate(phases[next].url);
-                    } else {
-                        onCompleteTour();
-                    }
-                } else if (xClicked) {
-                    onShowOverlay(index, activeStepIndex, startPhase);
-                }
-                // else: avanzamento normale tra step — non fare nulla
-            },
         });
 
         driverObj.drive(resumeAtStep || 0);
     }
 
     return { startPhase, buildSteps, isOnPhasePage };
-}
-
-/**
- * Overlay di conferma uscita tour.
- */
-export function showExitConfirmation(phaseIndex, stepIndex, startPhase, onCompleteTour) {
-    const existing = document.getElementById('tour-exit-overlay');
-    if (existing) existing.remove();
-
-    const overlay = document.createElement('div');
-    overlay.id = 'tour-exit-overlay';
-    overlay.innerHTML =
-        '<div style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100000;display:flex;align-items:center;justify-content:center;">' +
-            '<div style="background:#fff;border-radius:12px;padding:28px 32px;max-width:420px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.18);font-family:inherit;">' +
-                '<p style="margin:0 0 8px;font-size:1rem;font-weight:600;color:#111827;">Vuoi togliere il tutorial?</p>' +
-                '<p style="margin:0 0 24px;font-size:.9rem;color:#6b7280;">Puoi sempre trovarlo nella <a href="/admin/help" style="color:#0d9488;font-weight:500;text-decoration:underline;">pagina Guida \u2192</a></p>' +
-                '<div style="display:flex;gap:10px;justify-content:flex-end;">' +
-                    '<button id="tour-exit-resume" style="padding:8px 18px;border:1px solid #d1d5db;border-radius:8px;background:#fff;cursor:pointer;font-size:.875rem;color:#374151;">Continua tour</button>' +
-                    '<button id="tour-exit-skip" style="padding:8px 18px;border:none;border-radius:8px;background:#0d9488;color:#fff;cursor:pointer;font-size:.875rem;">S\u00ec, salta</button>' +
-                '</div>' +
-            '</div>' +
-        '</div>';
-    document.body.appendChild(overlay);
-
-    document.getElementById('tour-exit-skip').addEventListener('click', function () {
-        overlay.remove();
-        onCompleteTour();
-    });
-    document.getElementById('tour-exit-resume').addEventListener('click', function () {
-        overlay.remove();
-        startPhase(phaseIndex, stepIndex);
-    });
 }
 
 // ─── Bootstrap browser ───────────────────────────────────────────────────────
@@ -168,7 +113,7 @@ if (typeof window !== 'undefined' && typeof window.driver !== 'undefined') {
             steps: [
                 { element: 'aside a[href*="/admin/products"]', popover: { title: '\uD83D\uDCE6 Prodotti', description: 'Qui trovi il catalogo completo. Ogni riga è un prodotto con codice, fornitore e prezzo.', side: 'right' } },
                 { element: '.fi-ta-header-toolbar', popover: { title: 'Filtra e cerca', description: 'Usa la barra di ricerca per trovare per nome, SKU o fornitore. "Filtri" filtra per fornitore, categoria e tipo. "Colonne" mostra o nasconde i campi.', side: 'bottom', align: 'start' } },
-                { element: '.fi-ta-row:first-child', popover: { title: 'Modifica un prodotto', description: 'Clicca sull\'icona matita a destra di ogni riga per aprire la scheda prodotto completa con tutti i campi.', side: 'top', align: 'center' } },
+                { element: '.fi-ta-row:first-child', popover: { title: 'Modifica un prodotto', description: 'Clicca sull\\'icona matita a destra di ogni riga per aprire la scheda prodotto completa con tutti i campi.', side: 'top', align: 'center' } },
             ],
         },
         {
@@ -218,37 +163,17 @@ if (typeof window !== 'undefined' && typeof window.driver !== 'undefined') {
         }).catch(() => {});
     }
 
-    // Implementazione browser: rileva click su X e ESC key
-    function browserDetectXClick(callback) {
-        function onClose(e) {
-            if (e.target.closest('.driver-popover-close-btn')) callback();
-        }
-        function onEsc(e) {
-            if (e.key === 'Escape') callback();
-        }
-        document.addEventListener('click', onClose, true);
-        document.addEventListener('keydown', onEsc, true);
-        return function cleanup() {
-            document.removeEventListener('click', onClose, true);
-            document.removeEventListener('keydown', onEsc, true);
-        };
-    }
-
     const { startPhase } = buildTourCore({
         phases,
         PHASE_KEY,
         WELCOME_KEY,
         onNavigate: (url) => { window.location.href = url; },
         onCompleteTour: completeTour,
-        onShowOverlay: (phaseIdx, stepIdx, resume) => showExitConfirmation(phaseIdx, stepIdx, resume, completeTour),
-        detectXClick: browserDetectXClick,
     });
 
-    // Esponi il driver attivo per browserDetectXClick (getActiveIndex)
-    const _origStart = startPhase;
     window.startStudio3GHDTour = function () {
         sessionStorage.removeItem(PHASE_KEY);
-        _origStart(0);
+        startPhase(0);
     };
 
     document.addEventListener('DOMContentLoaded', function () {
