@@ -494,7 +494,7 @@
       const p = await res.json();
 
       // Update page title and breadcrumb
-      document.title = `${esc(p.name)} — 3G Home Design`;
+      document.title = `${p.name} — 3G Home Design`;
       document.getElementById('bc-name').textContent = p.name;
       if (p.category?.name) {
         const catLink = document.createElement('a');
