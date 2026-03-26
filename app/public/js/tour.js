@@ -1,10 +1,13 @@
 /**
  * Tour guidato Studio3GHD — Driver.js (browser IIFE)
  *
- * NOTA Driver.js v1: onDestroyStarted si attiva su OGNI transizione step e
- * su ogni cambio pagina (window.location.href), non solo su X/ESC.
- * Per questo si usa onNextClick/onPrevClick su tutti gli step per tracciare
- * la posizione, e un flag completedNaturally per distinguere X da done button.
+ * ARCHITETTURA: onDestroyed si attiva su OGNI transizione step (moveNext/movePrevious)
+ * e sulla chiusura (X, ESC). Per distinguere i due casi:
+ *
+ * - browserDetectXClick() installa un DOM listener su .driver-popover-close-btn e ESC.
+ *   Imposta xClicked=true PRIMA che onDestroyed si attivi.
+ * - activeStepIndex è tracciato da onNextClick/onPrevClick su ogni step.
+ * - onDestroyed controlla: completedNaturally → naviga | xClicked → overlay | else → nulla
  */
 (function () {
     if (typeof window.driver === 'undefined') return;
@@ -76,7 +79,24 @@
         }).catch(function () {});
     }
 
-    function showExitConfirmation(phaseIndex, stepIndex) {
+    // Rileva click su X e ESC — imposta xClicked=true PRIMA che onDestroyed si attivi.
+    // activeStepIndex è tracciato separatamente da onNextClick/onPrevClick.
+    function browserDetectXClick(callback) {
+        function onClose(e) {
+            if (e.target.closest('.driver-popover-close-btn')) callback();
+        }
+        function onEsc(e) {
+            if (e.key === 'Escape') callback();
+        }
+        document.addEventListener('click', onClose, true);
+        document.addEventListener('keydown', onEsc, true);
+        return function cleanup() {
+            document.removeEventListener('click', onClose, true);
+            document.removeEventListener('keydown', onEsc, true);
+        };
+    }
+
+    function showExitConfirmation(phaseIndex, stepIndex, startPhase) {
         var existing = document.getElementById('tour-exit-overlay');
         if (existing) existing.remove();
 
@@ -107,12 +127,12 @@
 
     function startPhase(index, resumeAtStep) {
         var phase = phases[index];
-        if (! phase) {
+        if (!phase) {
             completeTour();
             return;
         }
 
-        if (! isOnPhasePage(phase)) {
+        if (!isOnPhasePage(phase)) {
             sessionStorage.setItem(PHASE_KEY, String(index));
             window.location.href = phase.url;
             return;
@@ -122,7 +142,6 @@
 
         var steps = phase.steps.slice();
 
-        // Messaggio di benvenuto — solo al primo accesso
         if (index === 0 && sessionStorage.getItem(WELCOME_KEY) === '1') {
             sessionStorage.removeItem(WELCOME_KEY);
             steps = [{
@@ -135,12 +154,14 @@
 
         var isLastPhase = index === phases.length - 1;
         var completedNaturally = false;
+        var xClicked = false;
         var activeStepIndex = resumeAtStep || 0;
 
-        // Intercetta ogni click avanti/indietro per tracciare la posizione corrente.
-        // onNextClick sull'ultimo step segnala completamento naturale.
-        // NON usare onDestroyStarted: in Driver.js v1 si attiva su OGNI transizione
-        // step e su cambio pagina, non solo su X/ESC.
+        // Installa listener X/ESC — solo xClicked=true, activeStepIndex già tracciato sotto
+        var cleanupXDetect = browserDetectXClick(function () {
+            xClicked = true;
+        });
+
         var mappedSteps = steps.map(function (step, i) {
             var isLast = i === steps.length - 1;
             return Object.assign({}, step, {
@@ -167,6 +188,7 @@
             prevBtnText: '\u2190 Indietro',
             doneBtnText: isLastPhase ? '\u2713 Fatto!' : 'Prossima sezione \u2192',
             onDestroyed: function () {
+                cleanupXDetect();
                 if (completedNaturally) {
                     var next = index + 1;
                     if (next < phases.length) {
@@ -175,10 +197,10 @@
                     } else {
                         completeTour();
                     }
-                } else {
-                    // X o ESC premuti: mostra conferma
-                    showExitConfirmation(index, activeStepIndex);
+                } else if (xClicked) {
+                    showExitConfirmation(index, activeStepIndex, startPhase);
                 }
+                // else: avanzamento normale tra step — non fare nulla
             },
         });
 

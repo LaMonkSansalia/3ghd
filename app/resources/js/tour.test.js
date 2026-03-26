@@ -2,22 +2,37 @@
  * Test suite — Tour guidato Studio3GHD
  *
  * Testa il core del tour (buildTourCore, showExitConfirmation) usando Vitest + jsdom.
- * Il bootstrap browser (IIFE) non viene eseguito nei test perché window.driver è undefined.
+ * detectXClick è iniettato come dipendenza — makeDetectXClick() espone .trigger()
+ * per simulare il click su X senza dipendere da eventi DOM reali.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { buildTourCore, showExitConfirmation } from './tour.js';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+// Mock driver: moveNext NON chiama onDestroyed — in Driver.js reale è asincrono
 function makeDriver(config) {
     const instance = {
         drive:          vi.fn(),
         destroy:        vi.fn(() => config.onDestroyed?.()),
-        moveNext:       vi.fn(() => config.onDestroyed?.()),
+        moveNext:       vi.fn(),
         movePrevious:   vi.fn(),
         getActiveIndex: vi.fn(() => 0),
     };
     return instance;
+}
+
+// Factory detectXClick iniettabile. .trigger() simula X/ESC premuta.
+function makeDetectXClick() {
+    let _cb = null;
+    function detectXClick(callback) {
+        _cb = callback;
+        return function cleanup() { _cb = null; };
+    }
+    detectXClick.trigger = function () {
+        if (_cb) _cb();
+    };
+    return detectXClick;
 }
 
 function makePhasesFixture() {
@@ -42,20 +57,33 @@ function makePhasesFixture() {
     ];
 }
 
+// Helper: buildTourCore con detectXClick già iniettato e overrides opzionali
+function makeTourCore(overrides = {}) {
+    const dxc = makeDetectXClick();
+    const core = buildTourCore({
+        phases: makePhasesFixture(),
+        PHASE_KEY: 'pk',
+        WELCOME_KEY: 'wk',
+        onNavigate: vi.fn(),
+        onCompleteTour: vi.fn(),
+        onShowOverlay: vi.fn(),
+        detectXClick: dxc,
+        ...overrides,
+    });
+    return { ...core, detectXClick: dxc };
+}
+
 // ─── Setup globale ─────────────────────────────────────────────────────────────
 
 beforeEach(() => {
-    // Pulisci sessionStorage
     sessionStorage.clear();
 
-    // Simula window.location.pathname = /admin/products (pagina corretta per fase 0)
     Object.defineProperty(window, 'location', {
         value: { pathname: '/admin/products', href: '' },
         writable: true,
         configurable: true,
     });
 
-    // Installa window.driver mock — buildTourCore ne ha bisogno
     let capturedConfig;
     window.driver = {
         js: {
@@ -81,6 +109,7 @@ describe('isOnPhasePage', () => {
         const { isOnPhasePage } = buildTourCore({
             phases: makePhasesFixture(), PHASE_KEY: 'k', WELCOME_KEY: 'w',
             onNavigate: vi.fn(), onCompleteTour: vi.fn(), onShowOverlay: vi.fn(),
+            detectXClick: makeDetectXClick(),
         });
         expect(isOnPhasePage(makePhasesFixture()[0])).toBe(true);
     });
@@ -90,6 +119,7 @@ describe('isOnPhasePage', () => {
         const { isOnPhasePage } = buildTourCore({
             phases: makePhasesFixture(), PHASE_KEY: 'k', WELCOME_KEY: 'w',
             onNavigate: vi.fn(), onCompleteTour: vi.fn(), onShowOverlay: vi.fn(),
+            detectXClick: makeDetectXClick(),
         });
         expect(isOnPhasePage(makePhasesFixture()[0])).toBe(false);
     });
@@ -99,6 +129,7 @@ describe('isOnPhasePage', () => {
         const { isOnPhasePage } = buildTourCore({
             phases: makePhasesFixture(), PHASE_KEY: 'k', WELCOME_KEY: 'w',
             onNavigate: vi.fn(), onCompleteTour: vi.fn(), onShowOverlay: vi.fn(),
+            detectXClick: makeDetectXClick(),
         });
         expect(isOnPhasePage(makePhasesFixture()[0])).toBe(false);
     });
@@ -111,6 +142,7 @@ describe('buildSteps', () => {
         const { buildSteps } = buildTourCore({
             phases: makePhasesFixture(), PHASE_KEY: 'k', WELCOME_KEY: 'wk',
             onNavigate: vi.fn(), onCompleteTour: vi.fn(), onShowOverlay: vi.fn(),
+            detectXClick: makeDetectXClick(),
         });
         const steps = buildSteps(0);
         expect(steps).toHaveLength(3);
@@ -122,6 +154,7 @@ describe('buildSteps', () => {
         const { buildSteps } = buildTourCore({
             phases: makePhasesFixture(), PHASE_KEY: 'k', WELCOME_KEY: 'wk',
             onNavigate: vi.fn(), onCompleteTour: vi.fn(), onShowOverlay: vi.fn(),
+            detectXClick: makeDetectXClick(),
         });
         const steps = buildSteps(0);
         expect(steps).toHaveLength(4);
@@ -133,6 +166,7 @@ describe('buildSteps', () => {
         const { buildSteps } = buildTourCore({
             phases: makePhasesFixture(), PHASE_KEY: 'k', WELCOME_KEY: 'wk',
             onNavigate: vi.fn(), onCompleteTour: vi.fn(), onShowOverlay: vi.fn(),
+            detectXClick: makeDetectXClick(),
         });
         buildSteps(0);
         expect(sessionStorage.getItem('wk')).toBeNull();
@@ -143,6 +177,7 @@ describe('buildSteps', () => {
         const { buildSteps } = buildTourCore({
             phases: makePhasesFixture(), PHASE_KEY: 'k', WELCOME_KEY: 'wk',
             onNavigate: vi.fn(), onCompleteTour: vi.fn(), onShowOverlay: vi.fn(),
+            detectXClick: makeDetectXClick(),
         });
         const steps = buildSteps(1);
         expect(steps).toHaveLength(1);
@@ -156,10 +191,7 @@ describe('startPhase — navigazione', () => {
     it('naviga alla URL della fase se non siamo sulla pagina corretta', () => {
         window.location.pathname = '/admin/categories';
         const onNavigate = vi.fn();
-        const { startPhase } = buildTourCore({
-            phases: makePhasesFixture(), PHASE_KEY: 'pk', WELCOME_KEY: 'wk',
-            onNavigate, onCompleteTour: vi.fn(), onShowOverlay: vi.fn(),
-        });
+        const { startPhase } = makeTourCore({ onNavigate });
         startPhase(0);
         expect(onNavigate).toHaveBeenCalledWith('/admin/products');
         expect(sessionStorage.getItem('pk')).toBe('0');
@@ -167,20 +199,14 @@ describe('startPhase — navigazione', () => {
 
     it('salva PHASE_KEY prima di navigare', () => {
         window.location.pathname = '/admin/categories';
-        const { startPhase } = buildTourCore({
-            phases: makePhasesFixture(), PHASE_KEY: 'pk', WELCOME_KEY: 'wk',
-            onNavigate: vi.fn(), onCompleteTour: vi.fn(), onShowOverlay: vi.fn(),
-        });
+        const { startPhase } = makeTourCore();
         startPhase(1);
         expect(sessionStorage.getItem('pk')).toBe('1');
     });
 
     it('chiama completeTour se l\'indice supera il numero di fasi', () => {
         const onCompleteTour = vi.fn();
-        const { startPhase } = buildTourCore({
-            phases: makePhasesFixture(), PHASE_KEY: 'pk', WELCOME_KEY: 'wk',
-            onNavigate: vi.fn(), onCompleteTour, onShowOverlay: vi.fn(),
-        });
+        const { startPhase } = makeTourCore({ onCompleteTour });
         startPhase(99);
         expect(onCompleteTour).toHaveBeenCalledOnce();
     });
@@ -190,30 +216,21 @@ describe('startPhase — navigazione', () => {
 
 describe('startPhase — avvio driver', () => {
     it('avvia il driver con drive(0) se non c\'è resumeAtStep', () => {
-        const { startPhase } = buildTourCore({
-            phases: makePhasesFixture(), PHASE_KEY: 'pk', WELCOME_KEY: 'wk',
-            onNavigate: vi.fn(), onCompleteTour: vi.fn(), onShowOverlay: vi.fn(),
-        });
+        const { startPhase } = makeTourCore();
         startPhase(0);
         const driverInstance = window.driver.js.driver.mock.results[0].value;
         expect(driverInstance.drive).toHaveBeenCalledWith(0);
     });
 
     it('avvia il driver con drive(stepIndex) se viene passato resumeAtStep', () => {
-        const { startPhase } = buildTourCore({
-            phases: makePhasesFixture(), PHASE_KEY: 'pk', WELCOME_KEY: 'wk',
-            onNavigate: vi.fn(), onCompleteTour: vi.fn(), onShowOverlay: vi.fn(),
-        });
+        const { startPhase } = makeTourCore();
         startPhase(0, 2);
         const driverInstance = window.driver.js.driver.mock.results[0].value;
         expect(driverInstance.drive).toHaveBeenCalledWith(2);
     });
 
     it('tutti gli step hanno onNextClick e onPrevClick iniettati', () => {
-        const { startPhase } = buildTourCore({
-            phases: makePhasesFixture(), PHASE_KEY: 'pk', WELCOME_KEY: 'wk',
-            onNavigate: vi.fn(), onCompleteTour: vi.fn(), onShowOverlay: vi.fn(),
-        });
+        const { startPhase } = makeTourCore();
         startPhase(0);
         const config = window._capturedDriverConfig();
         config.steps.forEach((step) => {
@@ -226,77 +243,102 @@ describe('startPhase — avvio driver', () => {
 // ─── startPhase — completamento naturale (done button) ───────────────────────
 
 describe('startPhase — completamento naturale', () => {
-    it('naviga alla fase successiva quando onNextClick sull\'ultimo step → onDestroyed', () => {
+    it('naviga alla fase successiva quando done button sull\'ultimo step', () => {
         const onNavigate = vi.fn();
-        const { startPhase } = buildTourCore({
-            phases: makePhasesFixture(), PHASE_KEY: 'pk', WELCOME_KEY: 'wk',
-            onNavigate, onCompleteTour: vi.fn(), onShowOverlay: vi.fn(),
-        });
+        const { startPhase } = makeTourCore({ onNavigate });
         startPhase(0);
         const config = window._capturedDriverConfig();
         const lastStep = config.steps[config.steps.length - 1];
-        lastStep.onNextClick(); // simula click su "Prossima sezione →"
+        lastStep.onNextClick(); // setta completedNaturally = true
+        config.onDestroyed();   // Driver.js chiude il tour
         expect(onNavigate).toHaveBeenCalledWith('/admin/suppliers');
         expect(sessionStorage.getItem('pk')).toBe('1');
     });
 
-    it('chiama completeTour quando onNextClick sull\'ultimo step dell\'ultima fase', () => {
+    it('chiama completeTour quando done button sull\'ultimo step dell\'ultima fase', () => {
         window.location.pathname = '/admin/suppliers';
         const onCompleteTour = vi.fn();
-        const { startPhase } = buildTourCore({
-            phases: makePhasesFixture(), PHASE_KEY: 'pk', WELCOME_KEY: 'wk',
-            onNavigate: vi.fn(), onCompleteTour, onShowOverlay: vi.fn(),
-        });
+        const { startPhase } = makeTourCore({ onCompleteTour });
         startPhase(1);
         const config = window._capturedDriverConfig();
         const lastStep = config.steps[config.steps.length - 1];
         lastStep.onNextClick();
+        config.onDestroyed();
         expect(onCompleteTour).toHaveBeenCalledOnce();
+    });
+
+    it('avanzamento step normale NON mostra overlay (onDestroyed senza xClicked)', () => {
+        const onShowOverlay = vi.fn();
+        const { startPhase } = makeTourCore({ onShowOverlay });
+        startPhase(0);
+        const config = window._capturedDriverConfig();
+        config.steps[0].onNextClick(); // avanza step, NON imposta xClicked
+        config.onDestroyed();          // step advance — deve fare nulla
+        expect(onShowOverlay).not.toHaveBeenCalled();
     });
 });
 
 // ─── startPhase — X / chiusura prematura ─────────────────────────────────────
 
 describe('startPhase — chiusura con X', () => {
-    it('chiama onShowOverlay con phaseIndex e stepIndex corrente quando onDestroyed senza completamento', () => {
+    it('chiama onShowOverlay con phaseIndex e stepIndex quando X viene premuta', () => {
         const onShowOverlay = vi.fn();
+        const dxc = makeDetectXClick();
         const { startPhase } = buildTourCore({
             phases: makePhasesFixture(), PHASE_KEY: 'pk', WELCOME_KEY: 'wk',
             onNavigate: vi.fn(), onCompleteTour: vi.fn(), onShowOverlay,
+            detectXClick: dxc,
         });
         startPhase(0);
         const config = window._capturedDriverConfig();
-        // Simula X premuta: onDestroyed senza aver cliccato onNextClick sull'ultimo step
-        config.onDestroyed();
+        dxc.trigger();        // simula click su X
+        config.onDestroyed(); // Driver.js chiama onDestroyed dopo destroy
         expect(onShowOverlay).toHaveBeenCalledWith(0, 0, expect.any(Function));
     });
 
-    it('aggiorna activeStepIndex quando onNextClick su step non-ultimo', () => {
+    it('riporta lo stepIndex corretto quando X viene premuta dopo avanzamento', () => {
         const onShowOverlay = vi.fn();
+        const dxc = makeDetectXClick();
         const { startPhase } = buildTourCore({
             phases: makePhasesFixture(), PHASE_KEY: 'pk', WELCOME_KEY: 'wk',
             onNavigate: vi.fn(), onCompleteTour: vi.fn(), onShowOverlay,
+            detectXClick: dxc,
         });
         startPhase(0);
         const config = window._capturedDriverConfig();
-        // Avanza allo step 1
-        config.steps[0].onNextClick();
-        // Poi simula X
+        config.steps[0].onNextClick(); // activeStepIndex = 1 via onNextClick
+        dxc.trigger();                 // X premuta — xClicked = true
         config.onDestroyed();
         expect(onShowOverlay).toHaveBeenCalledWith(0, 1, expect.any(Function));
     });
 
     it('traccia indietro con onPrevClick', () => {
         const onShowOverlay = vi.fn();
+        const dxc = makeDetectXClick();
         const { startPhase } = buildTourCore({
             phases: makePhasesFixture(), PHASE_KEY: 'pk', WELCOME_KEY: 'wk',
             onNavigate: vi.fn(), onCompleteTour: vi.fn(), onShowOverlay,
+            detectXClick: dxc,
         });
         startPhase(0, 2); // parte dallo step 2
         const config = window._capturedDriverConfig();
-        config.steps[2].onPrevClick(); // torna a step 1
+        config.steps[2].onPrevClick(); // activeStepIndex = 1
+        dxc.trigger();                 // X premuta
         config.onDestroyed();
         expect(onShowOverlay).toHaveBeenCalledWith(0, 1, expect.any(Function));
+    });
+
+    it('avanzamento normale NON chiama onShowOverlay (fix bug principale)', () => {
+        // REGRESSION: prima del fix, onDestroyed mostrava l'overlay su ogni "Avanti →"
+        const onShowOverlay = vi.fn();
+        const { startPhase } = makeTourCore({ onShowOverlay });
+        startPhase(0);
+        const config = window._capturedDriverConfig();
+        config.steps[0].onNextClick(); // step advance — xClicked rimane false
+        config.onDestroyed();          // deve essere silenzioso
+        config.steps[1].onNextClick();
+        config.onDestroyed();
+        expect(onShowOverlay).not.toHaveBeenCalled();
     });
 });
 
@@ -331,31 +373,32 @@ describe('showExitConfirmation', () => {
     });
 
     it('"Continua tour" dopo X riprende dallo step corretto, non dall\'inizio', () => {
-        // Scenario completo: X premuta allo step 1 → Continua → deve ripartire dallo step 1
+        const dxc = makeDetectXClick();
         const onShowOverlay = vi.fn((phaseIdx, stepIdx, resume) => {
             showExitConfirmation(phaseIdx, stepIdx, resume, vi.fn());
         });
         const onNavigate = vi.fn();
         const { startPhase } = buildTourCore({
             phases: makePhasesFixture(), PHASE_KEY: 'pk', WELCOME_KEY: 'wk',
-            onNavigate, onCompleteTour: vi.fn(), onShowOverlay,
+            onNavigate, onCompleteTour: vi.fn(), onShowOverlay, detectXClick: dxc,
         });
 
-        // Avvia fase 0
         startPhase(0);
         const firstConfig = window._capturedDriverConfig();
 
         // Avanza allo step 1
-        firstConfig.steps[0].onNextClick();
+        firstConfig.steps[0].onNextClick(); // activeStepIndex = 1
 
         // Simula X
-        firstConfig.onDestroyed();
+        dxc.trigger();
+        firstConfig.onDestroyed(); // → onShowOverlay(0, 1, startPhase) → overlay
+
         expect(document.getElementById('tour-exit-overlay')).not.toBeNull();
 
         // Clicca "Continua tour"
         document.getElementById('tour-exit-resume').click();
 
-        // Il secondo driver deve essere avviato con drive(1)
+        // Il secondo driver deve partire da step 1
         const secondDriverInstance = window.driver.js.driver.mock.results[1].value;
         expect(secondDriverInstance.drive).toHaveBeenCalledWith(1);
     });
