@@ -265,16 +265,24 @@
 
 <script>
   const BASE = '/api/showroom';
-  let activeSlug = '';
 
   function fmtPrice(price) {
     if (price === null || price === undefined) return null;
     return '€\u00a0' + Number(price).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
+  function esc(str) {
+    if (str == null) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
   function renderCard(p) {
     const imgHtml = p.card
-      ? `<img src="${p.card}" alt="${p.name}" loading="lazy">`
+      ? `<img src="${esc(p.card)}" alt="${esc(p.name)}" loading="lazy">`
       : '';
 
     const badges = [];
@@ -282,19 +290,19 @@
     if (p.tipo_prodotto === 'campionato') badges.push('<span class="badge badge-campionato">Campionato</span>');
     if (p.tipo_prodotto === 'a_listino') badges.push('<span class="badge badge-listino">A Listino</span>');
 
-    const priceHtml = p.price !== null
+    const priceHtml = p.price != null
       ? `<div class="card-price">${fmtPrice(p.price)}</div>`
       : `<div class="card-price-na">Richiedi informazioni</div>`;
 
-    const meta = [p.brand, p.supplier].filter(Boolean).join(' · ');
+    const meta = [p.brand, p.supplier].filter(Boolean).map(esc).join(' · ');
 
     return `
       <a class="card" href="product.html?code=${encodeURIComponent(p.product_code)}">
         <div class="card-img${p.card ? '' : ' placeholder'}">${imgHtml}</div>
         <div class="card-body">
           ${badges.length ? `<div class="badges">${badges.join('')}</div>` : ''}
-          <div class="card-name">${p.name}</div>
-          ${meta ? `<div class="card-meta">${meta}</div>` : ''}
+          <div class="card-name">${esc(p.name)}</div>
+          ${meta ? `<div class="card-meta">${esc(meta)}</div>` : ''}
           ${priceHtml}
         </div>
       </a>`;
@@ -350,7 +358,6 @@
   }
 
   function selectFilter(btn, slug) {
-    activeSlug = slug;
     document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
     btn.classList.add('active');
     loadProducts(slug);
