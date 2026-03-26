@@ -17,7 +17,7 @@ class Product extends Model implements HasMedia
         'description', 'materials', 'colors', 'finishes', 'dimensions',
         'price_list', 'cost', 'markup_override', 'tags', 'notes',
         'source_url', 'source_file', 'is_active', 'is_featured', 'is_available',
-        'product_code',
+        'tipo_prodotto', 'product_code',
     ];
 
     protected function casts(): array
@@ -31,9 +31,9 @@ class Product extends Model implements HasMedia
             'price_list'      => 'decimal:2',
             'cost'            => 'decimal:2',
             'markup_override' => 'decimal:4',
-            'is_active'       => 'boolean',
-            'is_featured'     => 'boolean',
-            'is_available'    => 'boolean',
+            'is_active'   => 'boolean',
+            'is_featured' => 'boolean',
+            'is_available'=> 'boolean',
         ];
     }
 

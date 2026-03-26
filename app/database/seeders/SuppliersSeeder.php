@@ -21,6 +21,7 @@ class SuppliersSeeder extends Seeder
             ['name' => 'Complementi Taglio 60',   'website' => null,                           'catalog_format' => 'mixed'],
             ['name' => 'La Primavera',            'website' => null,                           'catalog_format' => 'mixed'],
             ['name' => 'Gaber',                   'website' => 'https://www.gaber.it',         'catalog_format' => 'pdf'],
+            ['name' => 'Bizzotto',                'website' => 'https://www.bizzotto.com',     'catalog_format' => 'web'],
         ];
 
         foreach ($suppliers as $data) {
