@@ -1,9 +1,12 @@
 /**
  * Tour guidato Studio3GHD — Driver.js (browser IIFE)
  *
- * ARCHITETTURA: navigazione diretta in onNextClick sull'ultimo step.
- * Non dipende da onDestroyed (si attiva su ogni moveNext, non solo al termine).
- * X / ESC: il tour si chiude e basta — nessun overlay di conferma.
+ * ARCHITETTURA:
+ * - NO onNextClick/onPrevClick custom: Driver.js gestisce internamente gli step advance.
+ *   Con onNextClick custom, onDestroyed scatta ad ogni moveNext() — bug.
+ *   Senza, onDestroyed scatta solo su Done button (ultimo step) o X.
+ * - Navigazione in onDestroyed: quando il tour finisce, avanza alla fase successiva.
+ * - X chiude il tour senza overlay — il tour può essere rilanciato dalla pagina Guida.
  */
 (function () {
     if (typeof window.driver === 'undefined') return;
@@ -103,41 +106,26 @@
         }
 
         var isLastPhase = index === phases.length - 1;
-        var driverObj;
 
-        var mappedSteps = steps.map(function (step, i) {
-            var isLast = i === steps.length - 1;
-            return Object.assign({}, step, {
-                onNextClick: function () {
-                    if (isLast) {
-                        // Navigazione diretta nell'handler — non dipende da onDestroyed
-                        var next = index + 1;
-                        if (next < phases.length) {
-                            sessionStorage.setItem(PHASE_KEY, String(next));
-                            window.location.href = phases[next].url;
-                        } else {
-                            completeTour();
-                            driverObj.destroy();
-                        }
-                    } else {
-                        driverObj.moveNext();
-                    }
-                },
-                onPrevClick: function () {
-                    driverObj.movePrevious();
-                },
-            });
-        });
-
-        driverObj = window.driver.js.driver({
+        // NESSUN onNextClick/onPrevClick custom — Driver.js gestisce internamente gli step advance.
+        // onDestroyed scatta solo su Done (ultimo step) o X. Con onNextClick custom scatterebbe
+        // su ogni moveNext(), rendendo impossibile distinguere completamento da X.
+        window.driver.js.driver({
             showProgress: false,
-            steps: mappedSteps,
+            steps: steps,
             nextBtnText: 'Avanti \u2192',
             prevBtnText: '\u2190 Indietro',
             doneBtnText: isLastPhase ? '\u2713 Fatto!' : 'Prossima sezione \u2192',
-        });
-
-        driverObj.drive(resumeAtStep || 0);
+            onDestroyed: function () {
+                var next = index + 1;
+                if (next < phases.length) {
+                    sessionStorage.setItem(PHASE_KEY, String(next));
+                    window.location.href = phases[next].url;
+                } else {
+                    completeTour();
+                }
+            },
+        }).drive(resumeAtStep || 0);
     }
 
     window.startStudio3GHDTour = function () {
