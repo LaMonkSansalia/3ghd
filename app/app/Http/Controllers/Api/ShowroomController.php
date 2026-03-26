@@ -16,7 +16,8 @@ class ShowroomController extends Controller
             'products' => fn ($q) => $q->where('is_active', true),
         ])
             ->orderBy('name')
-            ->get(['id', 'name', 'slug', 'products_count'])
+            ->get(['id', 'name', 'slug'])
+            // PHP-side filter: HAVING non funziona su colonne virtuali in SQLite (env test)
             ->filter(fn ($c) => $c->products_count > 0)
             ->map(fn ($c) => [
                 'id' => $c->id,
