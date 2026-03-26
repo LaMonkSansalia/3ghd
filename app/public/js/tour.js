@@ -42,19 +42,15 @@
                     },
                 },
                 {
-                    element: '.fi-ta-header-toolbar',
                     popover: {
                         title: 'Filtra e cerca',
                         description: 'Usa la barra di ricerca per trovare per nome, SKU o fornitore. Il pulsante "Filtri" consente di filtrare per fornitore, categoria e tipo. "Colonne" mostra o nasconde i campi visibili.',
-                        side: 'bottom',
                     },
                 },
                 {
-                    element: '.fi-ta-row:first-child',
                     popover: {
                         title: 'Modifica un prodotto',
                         description: 'Clicca sull\'icona matita a destra di ogni riga per aprire la scheda prodotto completa con tutti i campi.',
-                        side: 'top',
                     },
                 },
             ],
@@ -64,11 +60,9 @@
             match: '/admin/products/create',
             steps: [
                 {
-                    element: '.fi-fo-select-wrp',
                     popover: {
                         title: '✏️ Tipo prodotto',
-                        description: 'Seleziona il <strong>Tipo prodotto</strong> — obbligatorio. Campionato per configurazioni con codice fornitore, A listino per prodotti a prezzo fisso.',
-                        side: 'bottom',
+                        description: 'In alto a sinistra seleziona il <strong>Tipo prodotto</strong> — obbligatorio. Campionato per configurazioni con codice fornitore, A listino per prodotti a prezzo fisso.',
                     },
                 },
                 {
@@ -105,11 +99,9 @@
                     },
                 },
                 {
-                    element: '.fi-ta-row:first-child',
                     popover: {
                         title: 'Scheda fornitore',
                         description: 'Apri una scheda fornitore per vedere nome, sito, markup e contatti. In fondo trovi la lista dei suoi prodotti — clicca per modificarli direttamente.',
-                        side: 'top',
                     },
                 },
             ],
