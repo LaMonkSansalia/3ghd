@@ -38,7 +38,7 @@ class ShowroomController extends Controller
         ])
             ->where('is_active', true)
             ->when(
-                $request->category,
+                $request->query('category'),
                 fn ($q, $slug) => $q->whereHas('category', fn ($q) => $q->where('slug', $slug))
             )
             ->take(200)

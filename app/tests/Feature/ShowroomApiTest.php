@@ -151,7 +151,7 @@ class ShowroomApiTest extends TestCase
         $response = $this->getJson('/api/showroom/products');
 
         $item = $response->json('data.0');
-        foreach (['cost', 'markup_override', 'price_list', 'notes', 'tags', 'source_url', 'source_file'] as $field) {
+        foreach (['cost', 'markup_override', 'price_list', 'notes', 'tags', 'source_url', 'source_file', 'sku'] as $field) {
             $this->assertArrayNotHasKey($field, $item, "Field '{$field}' must not be exposed.");
         }
     }
@@ -191,8 +191,15 @@ class ShowroomApiTest extends TestCase
         $response = $this->getJson("/api/showroom/products/{$code}");
 
         $item = $response->json();
-        foreach (['cost', 'markup_override', 'price_list', 'notes', 'tags', 'source_url', 'source_file'] as $field) {
+        foreach (['cost', 'markup_override', 'price_list', 'notes', 'tags', 'source_url', 'source_file', 'sku'] as $field) {
             $this->assertArrayNotHasKey($field, $item, "Field '{$field}' must not be exposed.");
         }
+    }
+
+    public function test_products_returns_empty_for_unknown_category(): void
+    {
+        $response = $this->getJson('/api/showroom/products?category=doesnotexist');
+
+        $response->assertOk()->assertJsonCount(0, 'data');
     }
 }
