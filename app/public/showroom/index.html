@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Catalogo — 3G Home Design</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #E2EDEF;
+      color: #1a4b4e;
+      min-height: 100vh;
+    }
+
+    /* Topbar */
+    .topbar {
+      background: #299095;
+      color: white;
+      padding: 8px 24px;
+      font-size: 13px;
+    }
+    .topbar-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .topbar a { color: white; text-decoration: none; }
+    .topbar a:hover { text-decoration: underline; }
+
+    /* Header */
+    header {
+      background: white;
+      padding: 16px 24px;
+      border-bottom: 1px solid #d4e4e7;
+    }
+    .header-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo {
+      font-size: 20px;
+      font-weight: 700;
+      color: #1a4b4e;
+      text-decoration: none;
+      letter-spacing: -0.3px;
+    }
+    .logo span { color: #638e92; }
+    header nav a {
+      color: #638e92;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    /* Filters */
+    .filters-wrap {
+      background: white;
+      border-bottom: 1px solid #d4e4e7;
+      padding: 12px 24px;
+      overflow-x: auto;
+    }
+    .filters {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      gap: 8px;
+      flex-wrap: nowrap;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 0 20px;
+      min-height: 40px;
+      border-radius: 100px;
+      border: 1.5px solid #638e92;
+      background: white;
+      color: #638e92;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.12s, color 0.12s;
+    }
+    .pill:hover { background: #E2EDEF; }
+    .pill.active {
+      background: #299095;
+      border-color: #299095;
+      color: white;
+    }
+
+    /* Main */
+    main {
+      max-width: 1200px;
+      margin: 32px auto;
+      padding: 0 24px;
+    }
+
+    /* Loading */
+    .spinner {
+      display: none;
+      text-align: center;
+      padding: 60px 0;
+    }
+    .spinner-ring {
+      width: 36px;
+      height: 36px;
+      border: 3px solid #d4e4e7;
+      border-top-color: #299095;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      display: inline-block;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Grid */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+    @media (max-width: 1000px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 690px)  { .grid { grid-template-columns: 1fr; } }
+
+    /* Card */
+    .card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(26,75,78,0.06);
+      overflow: hidden;
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      flex-direction: column;
+      transition: box-shadow 0.12s;
+    }
+    .card:hover { box-shadow: 0 4px 16px rgba(26,75,78,0.12); }
+
+    .card-img {
+      aspect-ratio: 4/3;
+      background: linear-gradient(135deg, #299095 0%, #1a4b4e 100%);
+      overflow: hidden;
+    }
+    .card-img img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .card-img.placeholder { /* gradient only, no img */ }
+
+    .card-body {
+      padding: 14px 16px 18px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .badges {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 6px;
+      flex-wrap: wrap;
+    }
+    .badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 10px;
+      border-radius: 100px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    .badge-featured { background: #dcfce7; color: #166534; }
+    .badge-campionato { background: #cffafe; color: #155e75; }
+    .badge-listino { background: #E2EDEF; color: #299095; }
+
+    .card-name {
+      font-size: 15px;
+      font-weight: 600;
+      color: #1a4b4e;
+      line-height: 1.3;
+    }
+    .card-meta {
+      font-size: 12px;
+      color: #638e92;
+      margin-top: 2px;
+    }
+    .card-price {
+      font-size: 15px;
+      font-weight: 700;
+      color: #1a4b4e;
+      margin-top: auto;
+      padding-top: 10px;
+    }
+    .card-price-na {
+      font-size: 12px;
+      color: #638e92;
+      margin-top: auto;
+      padding-top: 10px;
+    }
+
+    /* Empty state */
+    .empty {
+      text-align: center;
+      padding: 80px 0;
+      color: #638e92;
+      font-size: 15px;
+    }
+
+    /* Footer */
+    footer {
+      background: #EEF4F5;
+      border-top: 1px solid #d4e4e7;
+      padding: 28px 24px;
+      margin-top: 48px;
+      text-align: center;
+      font-size: 13px;
+      color: #638e92;
+    }
+    footer strong { color: #1a4b4e; }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <span>Lun – Sab &nbsp;9:00–13:00 / 15:30–19:30</span>
+    <a href="mailto:tregihomedesign@gmail.com">tregihomedesign@gmail.com</a>
+  </div>
+</div>
+
+<header>
+  <div class="header-inner">
+    <a href="https://www.3ghomedesign.it" class="logo">3G <span>Home Design</span></a>
+    <nav>
+      <a href="https://www.3ghomedesign.it/contatti/">Contatti</a>
+    </nav>
+  </div>
+</header>
+
+<div class="filters-wrap">
+  <div class="filters" id="filters">
+    <button class="pill active" data-slug="">Tutti</button>
+  </div>
+</div>
+
+<main>
+  <div class="spinner" id="loading"><div class="spinner-ring"></div></div>
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="empty" style="display:none;">Nessun prodotto trovato.</div>
+</main>
+
+<footer>
+  <strong>3G Home Design</strong> · Via Roma, Roccapalumba (PA) · <a href="tel:+39091000000" style="color:#638e92;">091 000000</a>
+</footer>
+
+<script>
+  const BASE = '/api/showroom';
+  let activeSlug = '';
+
+  function fmtPrice(price) {
+    if (price === null || price === undefined) return null;
+    return '€\u00a0' + Number(price).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function renderCard(p) {
+    const imgHtml = p.card
+      ? `<img src="${p.card}" alt="${p.name}" loading="lazy">`
+      : '';
+
+    const badges = [];
+    if (p.is_featured) badges.push('<span class="badge badge-featured">In evidenza</span>');
+    if (p.tipo_prodotto === 'campionato') badges.push('<span class="badge badge-campionato">Campionato</span>');
+    if (p.tipo_prodotto === 'a_listino') badges.push('<span class="badge badge-listino">A Listino</span>');
+
+    const priceHtml = p.price !== null
+      ? `<div class="card-price">${fmtPrice(p.price)}</div>`
+      : `<div class="card-price-na">Richiedi informazioni</div>`;
+
+    const meta = [p.brand, p.supplier].filter(Boolean).join(' · ');
+
+    return `
+      <a class="card" href="product.html?code=${encodeURIComponent(p.product_code)}">
+        <div class="card-img${p.card ? '' : ' placeholder'}">${imgHtml}</div>
+        <div class="card-body">
+          ${badges.length ? `<div class="badges">${badges.join('')}</div>` : ''}
+          <div class="card-name">${p.name}</div>
+          ${meta ? `<div class="card-meta">${meta}</div>` : ''}
+          ${priceHtml}
+        </div>
+      </a>`;
+  }
+
+  async function loadProducts(slug) {
+    const grid = document.getElementById('grid');
+    const loading = document.getElementById('loading');
+    const empty = document.getElementById('empty');
+
+    grid.innerHTML = '';
+    empty.style.display = 'none';
+    loading.style.display = 'block';
+
+    try {
+      const url = slug ? `${BASE}/products?category=${encodeURIComponent(slug)}` : `${BASE}/products`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const json = await res.json();
+      const products = json.data || [];
+
+      if (products.length === 0) {
+        empty.style.display = 'block';
+      } else {
+        grid.innerHTML = products.map(renderCard).join('');
+      }
+    } catch (e) {
+      empty.textContent = 'Errore nel caricamento. Riprova più tardi.';
+      empty.style.display = 'block';
+    } finally {
+      loading.style.display = 'none';
+    }
+  }
+
+  async function loadFilters() {
+    try {
+      const res = await fetch(`${BASE}/categories`);
+      if (!res.ok) return;
+      const categories = await res.json();
+      const filters = document.getElementById('filters');
+
+      categories.forEach(cat => {
+        const btn = document.createElement('button');
+        btn.className = 'pill';
+        btn.dataset.slug = cat.slug;
+        btn.textContent = `${cat.name} (${cat.product_count})`;
+        btn.addEventListener('click', () => selectFilter(btn, cat.slug));
+        filters.appendChild(btn);
+      });
+    } catch (e) {
+      // filters non critici, si procede senza
+    }
+  }
+
+  function selectFilter(btn, slug) {
+    activeSlug = slug;
+    document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    loadProducts(slug);
+  }
+
+  document.getElementById('filters').addEventListener('click', e => {
+    if (e.target.dataset.slug === '') selectFilter(e.target, '');
+  });
+
+  // Init
+  loadFilters();
+  loadProducts('');
+</script>
+</body>
+</html>
