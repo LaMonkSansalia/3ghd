@@ -164,6 +164,35 @@
         }).catch(() => {});
     }
 
+    function showExitConfirmation(phaseIndex) {
+        const existing = document.getElementById('tour-exit-overlay');
+        if (existing) existing.remove();
+
+        const overlay = document.createElement('div');
+        overlay.id = 'tour-exit-overlay';
+        overlay.innerHTML = '<div style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100000;display:flex;align-items:center;justify-content:center;">' +
+            '<div style="background:#fff;border-radius:12px;padding:28px 32px;max-width:420px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.18);font-family:inherit;">' +
+                '<p style="margin:0 0 8px;font-size:1rem;font-weight:600;color:#111827;">Vuoi togliere il tutorial?</p>' +
+                '<p style="margin:0 0 24px;font-size:.9rem;color:#6b7280;">Puoi sempre trovarlo nella <a href="/admin/help" style="color:#0d9488;font-weight:500;text-decoration:underline;">pagina Guida \u2192</a></p>' +
+                '<div style="display:flex;gap:10px;justify-content:flex-end;">' +
+                    '<button id="tour-exit-resume" style="padding:8px 18px;border:1px solid #d1d5db;border-radius:8px;background:#fff;cursor:pointer;font-size:.875rem;color:#374151;">Continua tour</button>' +
+                    '<button id="tour-exit-skip" style="padding:8px 18px;border:none;border-radius:8px;background:#0d9488;color:#fff;cursor:pointer;font-size:.875rem;">S\u00ec, salta</button>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+        document.body.appendChild(overlay);
+
+        document.getElementById('tour-exit-skip').addEventListener('click', function () {
+            overlay.remove();
+            completeTour();
+        });
+
+        document.getElementById('tour-exit-resume').addEventListener('click', function () {
+            overlay.remove();
+            startPhase(phaseIndex);
+        });
+    }
+
     function startPhase(index) {
         const phase = phases[index];
         if (! phase) {
@@ -181,7 +210,7 @@
         sessionStorage.setItem(PHASE_KEY, String(index));
 
         // Messaggio di benvenuto — solo al primo accesso (WELCOME_KEY impostato dall'avvio automatico)
-        let steps = phase.steps;
+        let steps = phase.steps.slice();
         if (index === 0 && sessionStorage.getItem(WELCOME_KEY) === '1') {
             sessionStorage.removeItem(WELCOME_KEY);
             steps = [
@@ -191,24 +220,40 @@
                         description: 'Questo è lo strumento che ti supporterà in tutto quello che vuoi. Ho preparato un breve tutorial e riorganizzato le informazioni. Fammi sapere che ne pensi.<br><br><em>— Placito</em>',
                     },
                 },
-            ].concat(phase.steps);
+            ].concat(steps);
         }
 
         const isLastPhase = index === phases.length - 1;
 
-        const driverObj = window.driver.js.driver({
+        // Intercetta il completamento naturale (click su "Prossima sezione →" o "✓ Fatto!")
+        // sull'ultimo step. Se invece l'utente clicca X, onDestroyed mostra la conferma.
+        let completedNaturally = false;
+        const lastIdx = steps.length - 1;
+        steps[lastIdx] = Object.assign({}, steps[lastIdx], {
+            onNextClick: function () {
+                completedNaturally = true;
+                driverObj.moveNext();
+            },
+        });
+
+        let driverObj;
+        driverObj = window.driver.js.driver({
             showProgress: false,
             steps: steps,
-            nextBtnText: 'Avanti →',
-            prevBtnText: '← Indietro',
-            doneBtnText: isLastPhase ? '✓ Fatto!' : 'Prossima sezione →',
+            nextBtnText: 'Avanti \u2192',
+            prevBtnText: '\u2190 Indietro',
+            doneBtnText: isLastPhase ? '\u2713 Fatto!' : 'Prossima sezione \u2192',
             onDestroyed: function () {
-                const next = index + 1;
-                if (next < phases.length) {
-                    sessionStorage.setItem(PHASE_KEY, String(next));
-                    window.location.href = phases[next].url;
+                if (completedNaturally) {
+                    const next = index + 1;
+                    if (next < phases.length) {
+                        sessionStorage.setItem(PHASE_KEY, String(next));
+                        window.location.href = phases[next].url;
+                    } else {
+                        completeTour();
+                    }
                 } else {
-                    completeTour();
+                    showExitConfirmation(index);
                 }
             },
         });
