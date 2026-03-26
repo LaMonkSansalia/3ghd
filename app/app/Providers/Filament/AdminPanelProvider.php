@@ -59,7 +59,7 @@ class AdminPanelProvider extends PanelProvider
             ->brandLogoHeight('2rem')
             ->sidebarCollapsibleOnDesktop()
             ->colors([
-                'primary' => Color::hex('#0D9488'), // 3GHD teal
+                'primary' => Color::hex('#638e92'), // 3GHD brand teal — palette-1 (estratto dal sito)
                 'blue'    => Color::Blue,
                 'green'   => Color::Green,
                 'orange'  => Color::Orange,
