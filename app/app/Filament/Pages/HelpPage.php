@@ -13,5 +13,5 @@ class HelpPage extends Page
     protected static ?int $navigationSort = 99;
     protected static \UnitEnum|string|null $navigationGroup = null;
     protected static ?string $title = 'Guida Studio3GHD';
-    protected static string $slug = 'help';
+    protected static ?string $slug = 'help';
 }
