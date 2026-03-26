@@ -13,7 +13,9 @@ class ShowroomApiTest extends TestCase
     use RefreshDatabase;
 
     private Supplier $supplier;
+
     private Category $category;
+
     private Product $product;
 
     protected function setUp(): void
@@ -21,7 +23,7 @@ class ShowroomApiTest extends TestCase
         parent::setUp();
 
         $this->supplier = Supplier::create([
-            'name'           => 'Test Supplier',
+            'name' => 'Test Supplier',
             'markup_default' => 1.5,
         ]);
 
@@ -33,9 +35,9 @@ class ShowroomApiTest extends TestCase
         $this->product = Product::create([
             'supplier_id' => $this->supplier->id,
             'category_id' => $this->category->id,
-            'name'        => 'Test Divano',
-            'is_active'   => true,
-            'cost'        => 100.00,
+            'name' => 'Test Divano',
+            'is_active' => true,
+            'cost' => 100.00,
         ]);
     }
 
@@ -48,7 +50,7 @@ class ShowroomApiTest extends TestCase
         $response->assertOk()
             ->assertJsonCount(1)
             ->assertJsonFragment([
-                'slug'          => 'divani',
+                'slug' => 'divani',
                 'product_count' => 1,
             ]);
     }
@@ -67,8 +69,8 @@ class ShowroomApiTest extends TestCase
         Product::create([
             'supplier_id' => $this->supplier->id,
             'category_id' => $this->category->id,
-            'name'        => 'Bozza',
-            'is_active'   => false,
+            'name' => 'Bozza',
+            'is_active' => false,
         ]);
 
         $response = $this->getJson('/api/showroom/categories');
@@ -93,8 +95,8 @@ class ShowroomApiTest extends TestCase
     {
         Product::create([
             'supplier_id' => $this->supplier->id,
-            'name'        => 'Inattivo',
-            'is_active'   => false,
+            'name' => 'Inattivo',
+            'is_active' => false,
         ]);
 
         $response = $this->getJson('/api/showroom/products');
@@ -108,9 +110,9 @@ class ShowroomApiTest extends TestCase
         Product::create([
             'supplier_id' => $this->supplier->id,
             'category_id' => $other->id,
-            'name'        => 'Test Sedia',
-            'is_active'   => true,
-            'cost'        => 50.00,
+            'name' => 'Test Sedia',
+            'is_active' => true,
+            'cost' => 50.00,
         ]);
 
         $response = $this->getJson('/api/showroom/products?category=divani');
@@ -132,9 +134,9 @@ class ShowroomApiTest extends TestCase
     {
         Product::create([
             'supplier_id' => $this->supplier->id,
-            'name'        => 'No Cost',
-            'is_active'   => true,
-            'cost'        => null,
+            'name' => 'No Cost',
+            'is_active' => true,
+            'cost' => null,
         ]);
 
         $response = $this->getJson('/api/showroom/products');
@@ -170,8 +172,8 @@ class ShowroomApiTest extends TestCase
     {
         $inactive = Product::create([
             'supplier_id' => $this->supplier->id,
-            'name'        => 'Inattivo',
-            'is_active'   => false,
+            'name' => 'Inattivo',
+            'is_active' => false,
         ]);
 
         $this->getJson("/api/showroom/products/{$inactive->product_code}")
