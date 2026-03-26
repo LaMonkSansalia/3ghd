@@ -229,6 +229,7 @@
         // sull'ultimo step. Se invece l'utente clicca X, onDestroyed mostra la conferma.
         let completedNaturally = false;
         let activeStepIndex = resumeAtStep || 0;
+        let closingManually = false;
         const lastIdx = steps.length - 1;
         steps[lastIdx] = Object.assign({}, steps[lastIdx], {
             onNextClick: function () {
@@ -244,8 +245,13 @@
             nextBtnText: 'Avanti \u2192',
             prevBtnText: '\u2190 Indietro',
             doneBtnText: isLastPhase ? '\u2713 Fatto!' : 'Prossima sezione \u2192',
+            // onDestroyStarted sospende la chiusura in Driver.js v1 — bisogna chiamare
+            // destroy() manualmente. Il flag closingManually evita il loop.
             onDestroyStarted: function () {
+                if (closingManually || completedNaturally) return;
+                closingManually = true;
                 activeStepIndex = driverObj.getActiveIndex() || 0;
+                driverObj.destroy();
             },
             onDestroyed: function () {
                 if (completedNaturally) {
