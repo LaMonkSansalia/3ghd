@@ -55,6 +55,20 @@ class AdminPanelProvider extends PanelProvider
             ->sidebarCollapsibleOnDesktop()
             ->colors([
                 'primary' => Color::hex('#0D9488'), // 3GHD teal
+                'blue'    => Color::Blue,
+                'green'   => Color::Green,
+                'orange'  => Color::Orange,
+                'purple'  => Color::Purple,
+                'teal'    => Color::Teal,
+                'pink'    => Color::Pink,
+                'indigo'  => Color::Indigo,
+                'amber'   => Color::Amber,
+                'rose'    => Color::Rose,
+                'cyan'    => Color::Cyan,
+                'emerald' => Color::Emerald,
+                'violet'  => Color::Violet,
+                'yellow'  => Color::Yellow,
+                'lime'    => Color::Lime,
             ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')

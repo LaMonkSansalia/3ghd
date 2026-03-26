@@ -18,6 +18,14 @@
      *  - url:     pagina a cui navigare prima di mostrare gli step
      *  - match:   stringa che deve essere inclusa nel pathname per riconoscere la pagina
      *  - steps:   array di step Driver.js (element opzionale — se manca il popover è centrato)
+     *
+     * Selettori Filament v5:
+     *  .fi-ta-header-toolbar         barra strumenti tabella (ricerca + filtri + colonne)
+     *  .fi-ta-search-field           campo di ricerca
+     *  .fi-ta-row:first-child        prima riga della tabella
+     *  .fi-ta-col-manager            pulsante gestione colonne
+     *  .fi-fo-select-wrp             wrapper di un campo Select (primo = tipo_prodotto)
+     *  aside a[href*="..."]          link nella navigazione laterale
      */
     const phases = [
         {
@@ -34,15 +42,19 @@
                     },
                 },
                 {
+                    element: '.fi-ta-header-toolbar',
                     popover: {
                         title: 'Filtra e cerca',
                         description: 'Usa la barra di ricerca per trovare per nome, SKU o fornitore. Il pulsante "Filtri" consente di filtrare per fornitore, categoria e tipo. "Colonne" mostra o nasconde i campi visibili.',
+                        side: 'bottom',
                     },
                 },
                 {
+                    element: '.fi-ta-row:first-child',
                     popover: {
                         title: 'Modifica un prodotto',
                         description: 'Clicca sull\'icona matita a destra di ogni riga per aprire la scheda prodotto completa con tutti i campi.',
+                        side: 'top',
                     },
                 },
             ],
@@ -52,26 +64,28 @@
             match: '/admin/products/create',
             steps: [
                 {
+                    element: '.fi-fo-select-wrp',
                     popover: {
-                        title: '✏️ Scheda prodotto',
-                        description: 'In alto a sinistra seleziona il <strong>Tipo prodotto</strong> — obbligatorio. Campionato per configurazioni con codice fornitore, A listino per prodotti a prezzo fisso.',
+                        title: '✏️ Tipo prodotto',
+                        description: 'Seleziona il <strong>Tipo prodotto</strong> — obbligatorio. Campionato per configurazioni con codice fornitore, A listino per prodotti a prezzo fisso.',
+                        side: 'bottom',
                     },
                 },
                 {
                     popover: {
-                        title: 'Sidebar destra — Classificazione',
-                        description: 'Assegna <strong>Fornitore</strong> e <strong>Categoria</strong>. Se non esistono ancora puoi crearli direttamente dalla select con il pulsante "+". Inserisci anche il Codice fornitore (verbatim dal catalogo).',
+                        title: 'Sidebar — Classificazione',
+                        description: 'Nella colonna di destra assegna <strong>Fornitore</strong> e <strong>Categoria</strong>. Se non esistono ancora puoi crearli direttamente dalla select con il pulsante "+". Inserisci anche il Codice fornitore (verbatim dal catalogo).',
                     },
                 },
                 {
                     popover: {
-                        title: 'Sidebar destra — Prezzi',
+                        title: 'Sidebar — Prezzi',
                         description: 'Il <strong>Prezzo cliente</strong> si aggiorna automaticamente: Costo acquisto × Markup. Il markup usa quello del fornitore se non imposti un override. Il costo acquisto è visibile solo allo staff.',
                     },
                 },
                 {
                     popover: {
-                        title: 'Sezioni in basso (collapsed)',
+                        title: 'Sezioni collassate in basso',
                         description: 'Clicca su <strong>Attributi prodotto</strong> per aggiungere rivestimento, colore, gambe, ecc. In <strong>Dimensioni</strong> inserisci L × P × H. In <strong>Note e Tag</strong> aggiungi memo interni.',
                     },
                 },
@@ -91,9 +105,11 @@
                     },
                 },
                 {
+                    element: '.fi-ta-row:first-child',
                     popover: {
                         title: 'Scheda fornitore',
                         description: 'Apri una scheda fornitore per vedere nome, sito, markup e contatti. In fondo trovi la lista dei suoi prodotti — clicca per modificarli direttamente.',
+                        side: 'top',
                     },
                 },
             ],
@@ -128,7 +144,7 @@
         },
     ];
 
-    function isOnPhagePage(phase) {
+    function isOnPhasePage(phase) {
         const path = window.location.pathname;
         if (phase.excludeMatch && path.includes(phase.excludeMatch)) return false;
         return path.includes(phase.match);
@@ -154,7 +170,7 @@
         }
 
         // Se non siamo sulla pagina giusta, naviga e riprendi
-        if (! isOnPhagePage(phase)) {
+        if (! isOnPhasePage(phase)) {
             sessionStorage.setItem(PHASE_KEY, String(index));
             window.location.href = phase.url;
             return;

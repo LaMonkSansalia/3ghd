@@ -238,7 +238,7 @@ class ProductForm
                                     ->required(),
                             ])
                             ->columns(2)
-                            ->addButtonLabel('+ Aggiungi attributo')
+                            ->addActionLabel('+ Aggiungi attributo')
                             ->reorderable()
                             ->collapsible()
                             ->columnSpanFull()
