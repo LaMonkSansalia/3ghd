@@ -16,14 +16,9 @@ class CategoriesTable
             ->columns([
                 TextColumn::make('name')
                     ->label('Categoria')
-                    ->searchable()
-                    ->sortable()
-                    ->weight('semibold'),
-
-                TextColumn::make('parent.name')
-                    ->label('Categoria padre')
-                    ->placeholder('— radice —')
-                    ->sortable(),
+                    ->formatStateUsing(fn (string $state, $record) => $record->parent_id ? '└─ ' . $state : $state)
+                    ->weight(fn ($record) => $record->parent_id ? 'normal' : 'semibold')
+                    ->searchable(),
 
                 TextColumn::make('slug')
                     ->label('Slug')
@@ -43,7 +38,7 @@ class CategoriesTable
                     ->badge()
                     ->color('gray'),
             ])
-            ->defaultSort('sort_order')
+            ->defaultSort(fn ($query) => $query->orderByRaw('COALESCE(parent_id, id)')->orderBy('sort_order'))
             ->filters([
                 //
             ])

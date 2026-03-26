@@ -7,12 +7,8 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Filters\SelectFilter;
-use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
-use App\Models\Category;
-use App\Models\Supplier;
 
 class ProductsTable
 {
@@ -34,7 +30,8 @@ class ProductsTable
                     ->color('gray')
                     ->searchable()
                     ->sortable()
-                    ->placeholder('—'),
+                    ->placeholder('—')
+                    ->toggleable(),
 
                 TextColumn::make('name')
                     ->label('Prodotto')
@@ -47,32 +44,48 @@ class ProductsTable
                     ->searchable()
                     ->sortable()
                     ->badge()
-                    ->color('gray'),
-
-                TextColumn::make('category.name')
-                    ->label('Categoria')
-                    ->sortable()
-                    ->placeholder('—'),
-
-                TextColumn::make('sku')
-                    ->label('SKU')
-                    ->searchable()
-                    ->placeholder('—')
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->color('gray')
+                    ->toggleable(),
 
                 TextColumn::make('price_list')
                     ->label('Listino')
                     ->money('EUR')
                     ->sortable()
-                    ->placeholder('—'),
+                    ->placeholder('—')
+                    ->toggleable(),
 
-                ToggleColumn::make('is_active')
-                    ->label('Attivo')
-                    ->sortable(),
+                TextColumn::make('tipo_prodotto')
+                    ->label('Tipo')
+                    ->badge()
+                    ->formatStateUsing(fn (?string $state) => match ($state) {
+                        'campionato' => 'Campionato',
+                        'a_listino'  => 'A listino',
+                        default      => '—',
+                    })
+                    ->color(fn (?string $state) => match ($state) {
+                        'campionato' => 'success',
+                        'a_listino'  => 'info',
+                        default      => 'gray',
+                    })
+                    ->sortable()
+                    ->toggleable(),
 
-                ToggleColumn::make('is_available')
-                    ->label('Disponibile')
-                    ->sortable(),
+                TextColumn::make('category.name')
+                    ->label('Categoria')
+                    ->sortable()
+                    ->placeholder('—')
+                    ->toggleable(),
+
+                TextColumn::make('collection')
+                    ->label('Collezione')
+                    ->placeholder('—')
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                TextColumn::make('sku')
+                    ->label('Cod. fornitore')
+                    ->searchable()
+                    ->placeholder('—')
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 TextColumn::make('updated_at')
                     ->label('Aggiornato')
@@ -95,21 +108,12 @@ class ProductsTable
                     ->searchable()
                     ->preload(),
 
-                TernaryFilter::make('is_active')
-                    ->label('Stato')
-                    ->placeholder('Tutti')
-                    ->trueLabel('Solo attivi')
-                    ->falseLabel('Solo inattivi'),
-
-                TernaryFilter::make('is_available')
-                    ->label('Disponibilità')
-                    ->placeholder('Tutti')
-                    ->trueLabel('Disponibili')
-                    ->falseLabel('Non disponibili'),
-
-                TernaryFilter::make('is_featured')
-                    ->label('In evidenza')
-                    ->placeholder('Tutti'),
+                SelectFilter::make('tipo_prodotto')
+                    ->label('Tipo prodotto')
+                    ->options([
+                        'campionato' => 'Campionato',
+                        'a_listino'  => 'A listino',
+                    ]),
             ])
             ->recordActions([
                 EditAction::make(),

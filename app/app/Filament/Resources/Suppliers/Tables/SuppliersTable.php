@@ -2,15 +2,11 @@
 
 namespace App\Filament\Resources\Suppliers\Tables;
 
-use App\Jobs\DiscoverWebsiteJob;
-use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
-use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ToggleColumn;
-use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 
 class SuppliersTable
@@ -23,16 +19,6 @@ class SuppliersTable
                     ->label('Fornitore')
                     ->searchable()
                     ->sortable(),
-
-                TextColumn::make('catalog_format')
-                    ->label('Formato')
-                    ->badge()
-                    ->color(fn (string $state) => match ($state) {
-                        'pdf'    => 'danger',
-                        'excel', 'csv' => 'success',
-                        'web'    => 'info',
-                        default  => 'gray',
-                    }),
 
                 TextColumn::make('website')
                     ->label('Sito')
@@ -63,29 +49,8 @@ class SuppliersTable
                     ->sortable(),
             ])
             ->defaultSort('name')
-            ->filters([
-                TernaryFilter::make('is_active')
-                    ->label('Stato')
-                    ->placeholder('Tutti'),
-            ])
+            ->filters([])
             ->recordActions([
-                Action::make('analyze_website')
-                    ->label('Analizza sito')
-                    ->icon('heroicon-o-globe-alt')
-                    ->color('info')
-                    ->visible(fn ($record) => ! empty($record->website))
-                    ->requiresConfirmation()
-                    ->modalHeading('Analizza presenza online')
-                    ->modalDescription(fn ($record) => "Verrà avviato un crawl di {$record->website} per scoprire prodotti e collezioni. Risultati in \"Analisi Siti\".")
-                    ->action(function ($record) {
-                        DiscoverWebsiteJob::dispatch($record->id, $record->website);
-                        Notification::make()
-                            ->title('Analisi avviata')
-                            ->body("Crawl di {$record->website} in esecuzione.")
-                            ->success()
-                            ->send();
-                    }),
-
                 EditAction::make(),
             ])
             ->toolbarActions([

@@ -25,6 +25,8 @@ class ImportWizard extends Page implements HasForms
 
     protected string $view = 'filament.admin.pages.import-wizard';
 
+    protected static bool $shouldRegisterNavigation = false;
+
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-arrow-up-tray';
     protected static ?string $navigationLabel = 'Importa Catalogo';
     protected static \UnitEnum|string|null $navigationGroup = 'Catalogo';

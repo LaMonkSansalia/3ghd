@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\Suppliers\Schemas;
 
-use Filament\Forms\Components\Select;
 use Filament\Schemas\Components\Section;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -15,7 +14,7 @@ class SupplierForm
     {
         return $schema
             ->components([
-                Section::make('Dati fornitore')
+                Section::make('Fornitore')
                     ->columns(2)
                     ->schema([
                         TextInput::make('name')
@@ -29,22 +28,20 @@ class SupplierForm
                             ->url()
                             ->maxLength(255),
 
-                        Select::make('catalog_format')
-                            ->label('Formato catalogo')
-                            ->options([
-                                'pdf'    => 'PDF',
-                                'csv'    => 'CSV',
-                                'excel'  => 'Excel (.xlsx)',
-                                'web'    => 'Sito web',
-                                'images' => 'Immagini',
-                                'mixed'  => 'Misto',
-                            ])
-                            ->default('mixed'),
+                        TextInput::make('markup_default')
+                            ->label('Markup default')
+                            ->numeric()
+                            ->default(1.35)
+                            ->helperText('Es. 1.35 = +35% sul listino. Applicato a tutti i prodotti senza override.'),
+
+                        Toggle::make('is_active')
+                            ->label('Fornitore attivo')
+                            ->default(true)
+                            ->columnSpanFull(),
                     ]),
 
                 Section::make('Contatto')
                     ->columns(3)
-                    ->collapsed()
                     ->schema([
                         TextInput::make('contact_name')
                             ->label('Nome referente')
@@ -57,19 +54,6 @@ class SupplierForm
                             ->label('Telefono')
                             ->tel()
                             ->maxLength(50),
-                    ]),
-
-                Section::make('Pricing')
-                    ->columns(2)
-                    ->schema([
-                        TextInput::make('markup_default')
-                            ->label('Markup default')
-                            ->numeric()
-                            ->default(1.35)
-                            ->helperText('Es. 1.35 = +35% sul listino. Applicato a tutti i prodotti senza override.'),
-                        Toggle::make('is_active')
-                            ->label('Fornitore attivo')
-                            ->default(true),
                     ]),
 
                 Section::make('Note')

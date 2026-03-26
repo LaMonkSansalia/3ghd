@@ -16,6 +16,8 @@ class WebDiscoveryResource extends Resource
 {
     protected static ?string $model = WebDiscovery::class;
 
+    protected static bool $shouldRegisterNavigation = false;
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedGlobeAlt;
 
     protected static ?string $navigationLabel = 'Analisi Siti';

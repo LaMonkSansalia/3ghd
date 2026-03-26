@@ -8,4 +8,13 @@ use Filament\Resources\Pages\CreateRecord;
 class CreateProduct extends CreateRecord
 {
     protected static string $resource = ProductResource::class;
+
+    public function mount(): void
+    {
+        parent::mount();
+
+        if ($supplierId = request()->integer('supplier_id')) {
+            $this->form->fill(['supplier_id' => $supplierId]);
+        }
+    }
 }

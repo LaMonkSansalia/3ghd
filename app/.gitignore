@@ -38,3 +38,4 @@ Thumbs.db
 CLAUDE.md
 *.md
 !README.md
+!resources/docs/*.md

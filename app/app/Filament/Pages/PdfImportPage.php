@@ -25,6 +25,8 @@ class PdfImportPage extends Page implements HasForms
 
     protected string $view = 'filament.admin.pages.pdf-import';
 
+    protected static bool $shouldRegisterNavigation = false;
+
     protected static \BackedEnum|string|null $navigationIcon  = 'heroicon-o-document-arrow-up';
     protected static ?string $navigationLabel = 'Importa PDF';
     protected static \UnitEnum|string|null $navigationGroup = 'Catalogo';

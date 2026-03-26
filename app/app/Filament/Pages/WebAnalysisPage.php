@@ -22,6 +22,8 @@ class WebAnalysisPage extends Page implements HasForms
 
     protected string $view = 'filament.admin.pages.web-analysis-page';
 
+    protected static bool $shouldRegisterNavigation = false;
+
     protected static \BackedEnum|string|null $navigationIcon  = 'heroicon-o-globe-alt';
     protected static ?string $navigationLabel = 'Analisi Sito Fornitore';
     protected static \UnitEnum|string|null $navigationGroup = 'Catalogo';
